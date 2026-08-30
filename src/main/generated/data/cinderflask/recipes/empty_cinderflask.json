@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "B": {
+      "item": "minecraft:glass_bottle"
+    },
+    "G": {
+      "item": "minecraft:gold_ingot"
+    }
+  },
+  "pattern": [
+    " G ",
+    "G G",
+    "BBB"
+  ],
+  "result": {
+    "item": "cinderflask:empty_cinderflask"
+  },
+  "show_notification": true
+}

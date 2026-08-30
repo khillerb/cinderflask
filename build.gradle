@@ -1,0 +1,127 @@
+plugins {
+    id 'fabric-loom' version '1.10.5'
+    id 'maven-publish'
+}
+
+version = "${project.mod_version}+mc${project.minecraft_version}"
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+repositories {
+    maven {
+        name = 'TerraformersMC'
+        url = 'https://maven.terraformersmc.com/releases/'
+        content {
+            includeGroup 'dev.emi'
+            includeGroup 'com.terraformersmc'
+        }
+    }
+}
+
+loom {
+    splitEnvironmentSourceSets()
+}
+
+sourceSets {
+    gametest {
+        compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
+        runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
+    }
+}
+
+loom {
+    mods {
+        "cinderflask" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+        // Separate mod id so the gametest entrypoint stays out of the release jar.
+        "cinderflask-gametest" {
+            sourceSet sourceSets.gametest
+        }
+    }
+
+    runs {
+        gametest {
+            inherit server
+            name = 'Game Test'
+            vmArg '-Dfabric-api.gametest'
+            vmArg "-Dfabric-api.gametest.report-file=${project.layout.buildDirectory.get().asFile}/junit.xml"
+            runDir 'build/gametest'
+            source sourceSets.gametest
+        }
+    }
+}
+
+fabricApi {
+    configureDataGeneration()
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    // Client-side and compile-only: EMI never requests the entrypoint when it is not installed.
+    modClientCompileOnly "dev.emi:emi-fabric:${project.emi_version}:api"
+}
+
+// Game tests run as part of `build`.
+tasks.named('check') {
+    dependsOn tasks.named('runGametest')
+}
+
+processResources {
+    inputs.property 'version', project.version
+    inputs.property 'github_repo', project.github_repo
+    inputs.property 'mod_author', project.mod_author
+
+    filesMatching('fabric.mod.json') {
+        expand(
+                'version': project.version,
+                'github_repo': project.github_repo,
+                'mod_author': project.mod_author
+        )
+    }
+}
+
+// Byte-identical jars from the same commit.
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = 'UTF-8'
+    it.options.release = 17
+}
+
+java {
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+jar {
+    from('LICENSE') {
+        rename { "${it}_${project.base.archivesName.get()}" }
+    }
+}
+
+publishing {
+    publications {
+        create('mavenJava', MavenPublication) {
+            artifactId = project.archives_base_name
+            from components.java
+        }
+    }
+    repositories {
+    }
+}

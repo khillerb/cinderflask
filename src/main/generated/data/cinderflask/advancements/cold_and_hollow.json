@@ -1,0 +1,38 @@
+{
+  "parent": "minecraft:story/smelt_iron",
+  "criteria": {
+    "has_empty_cinderflask": {
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "cinderflask:empty_cinderflask"
+            ]
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    }
+  },
+  "display": {
+    "announce_to_chat": true,
+    "description": {
+      "translate": "advancements.cinderflask.cold_and_hollow.description"
+    },
+    "frame": "task",
+    "hidden": false,
+    "icon": {
+      "item": "cinderflask:empty_cinderflask"
+    },
+    "show_toast": true,
+    "title": {
+      "translate": "advancements.cinderflask.cold_and_hollow.title"
+    }
+  },
+  "requirements": [
+    [
+      "has_empty_cinderflask"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

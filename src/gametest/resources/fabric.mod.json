@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "cinderflask-gametest",
+  "version": "1.0.0",
+  "name": "Cinderflask Game Tests",
+  "description": "Game tests for Cinderflask. Never shipped; it exists so the gametest entrypoint stays out of the release jar.",
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-gametest": [
+      "dev.cinderflask.test.CinderflaskGameTest"
+    ]
+  },
+  "depends": {
+    "cinderflask": "*",
+    "fabric-gametest-api-v1": "*"
+  }
+}

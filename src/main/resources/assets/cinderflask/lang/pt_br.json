@@ -1,0 +1,28 @@
+{
+  "item.cinderflask.cinderflask": "Frasco de Brasas",
+  "item.cinderflask.empty_cinderflask": "Frasco de Brasas Vazio",
+
+  "cinderflask.tooltip.embers": "Brasas: %s fundições",
+  "cinderflask.tooltip.embers_ticks": "Brasas: %s ticks",
+  "cinderflask.tooltip.lore.lit": "A centelha presa aqui dentro mantém as brasas vivas muito depois de o fogo ter se apagado.",
+  "cinderflask.tooltip.lore.unlit": "A centelha não tem do que se alimentar. Encha o frasco com qualquer coisa que queime.",
+  "cinderflask.tooltip.lore.cold": "Ouro e aço enegrecido em volta de vidro frio. Não guarda nada até que algo vivo lhe empreste uma centelha.",
+  "cinderflask.tooltip.spark_sources": "Aceso por:",
+  "cinderflask.tooltip.spark_sources.none": "Nada aqui pode acendê-lo.",
+  "cinderflask.tooltip.worth": "Vale: %s fundições",
+  "cinderflask.tooltip.worth_stack": "Pilha: %s fundições",
+  "cinderflask.tooltip.worth_ticks": "Vale: %s ticks",
+  "cinderflask.tooltip.worth_ticks_stack": "Pilha: %s ticks",
+
+  "cinderflask.gui.embers": "Brasas: %s fundições",
+  "cinderflask.gui.embers_ticks": "%s ticks",
+  "cinderflask.message.nothing_to_burn": "Nada do que você carrega vai queimar.",
+
+  "emi.category.cinderflask.sparking": "Acendimento",
+  "cinderflask.emi.sparking.hint": "Clique com o botão direito em %s vivo usando o Frasco de Brasas Vazio.",
+
+  "advancements.cinderflask.cold_and_hollow.title": "Frio e Oco",
+  "advancements.cinderflask.cold_and_hollow.description": "Fabrique um Frasco de Brasas Vazio. O ouro e o vidro são a parte fácil.",
+  "advancements.cinderflask.everburn.title": "Fogo Eterno",
+  "advancements.cinderflask.everburn.description": "Sele uma centelha viva num Frasco de Brasas e pare de queimar um carvão inteiro por uma única fundição."
+}

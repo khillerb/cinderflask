@@ -1,0 +1,28 @@
+{
+  "item.cinderflask.cinderflask": "Frasco de Brasas",
+  "item.cinderflask.empty_cinderflask": "Frasco de Brasas Vacío",
+
+  "cinderflask.tooltip.embers": "Brasas: %s fundiciones",
+  "cinderflask.tooltip.embers_ticks": "Brasas: %s ticks",
+  "cinderflask.tooltip.lore.lit": "La chispa encerrada aquí mantiene vivas las brasas mucho después de que el fuego se habría apagado.",
+  "cinderflask.tooltip.lore.unlit": "La chispa no tiene de qué alimentarse. Llena el frasco con cualquier cosa que arda.",
+  "cinderflask.tooltip.lore.cold": "Oro y acero ennegrecido alrededor de vidrio frío. No guarda nada hasta que algo vivo le preste una chispa.",
+  "cinderflask.tooltip.spark_sources": "Se enciende con:",
+  "cinderflask.tooltip.spark_sources.none": "Nada aquí puede encenderlo.",
+  "cinderflask.tooltip.worth": "Vale: %s fundiciones",
+  "cinderflask.tooltip.worth_stack": "Pila: %s fundiciones",
+  "cinderflask.tooltip.worth_ticks": "Vale: %s ticks",
+  "cinderflask.tooltip.worth_ticks_stack": "Pila: %s ticks",
+
+  "cinderflask.gui.embers": "Brasas: %s fundiciones",
+  "cinderflask.gui.embers_ticks": "%s ticks",
+  "cinderflask.message.nothing_to_burn": "Nada de lo que llevas arderá.",
+
+  "emi.category.cinderflask.sparking": "Encendido",
+  "cinderflask.emi.sparking.hint": "Haz clic derecho sobre %s con vida usando el Frasco de Brasas Vacío.",
+
+  "advancements.cinderflask.cold_and_hollow.title": "Frío y Hueco",
+  "advancements.cinderflask.cold_and_hollow.description": "Fabrica un Frasco de Brasas Vacío. El oro y el vidrio son la parte fácil.",
+  "advancements.cinderflask.everburn.title": "Fuego Eterno",
+  "advancements.cinderflask.everburn.description": "Sella una chispa viva en un Frasco de Brasas y deja de quemar un carbón entero por una sola fundición."
+}

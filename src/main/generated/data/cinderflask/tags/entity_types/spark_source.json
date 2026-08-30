@@ -1,0 +1,11 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "naturalist:firefly",
+      "required": false
+    },
+    "minecraft:blaze",
+    "minecraft:magma_cube"
+  ]
+}

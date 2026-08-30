@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "cinderflask:item/cinderflask"
+  },
+  "overrides": [
+    { "predicate": { "cinderflask:embers": 0.01 }, "model": "cinderflask:item/cinderflask_quarter" },
+    { "predicate": { "cinderflask:embers": 0.25 }, "model": "cinderflask:item/cinderflask_half" },
+    { "predicate": { "cinderflask:embers": 0.5 },  "model": "cinderflask:item/cinderflask_3quarter" },
+    { "predicate": { "cinderflask:embers": 0.75 }, "model": "cinderflask:item/cinderflask_full" }
+  ]
+}

@@ -1,0 +1,10 @@
+# gradlew must stay LF or CI on Linux fails with "bad interpreter"; .bat must stay CRLF.
+* text=auto eol=lf
+gradlew text eol=lf
+*.bat text eol=crlf
+
+*.jar binary
+*.png binary
+gradle/wrapper/gradle-wrapper.jar binary
+
+src/main/generated/** linguist-generated=true
