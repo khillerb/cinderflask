@@ -11,6 +11,7 @@ base {
 }
 
 repositories {
+    mavenCentral()
     maven {
         name = 'TerraformersMC'
         url = 'https://maven.terraformersmc.com/releases/'
@@ -68,9 +69,19 @@ dependencies {
 
     // Client-side and compile-only: EMI never requests the entrypoint when it is not installed.
     modClientCompileOnly "dev.emi:emi-fabric:${project.emi_version}:api"
+
+    // The humour maths is pure Java and gets plain unit tests; everything with a world uses gametests.
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-// Game tests run as part of `build`.
+tasks.named('test') {
+    useJUnitPlatform()
+    testLogging { events 'failed' }
+}
+
+// Both suites run as part of `build`.
 tasks.named('check') {
     dependsOn tasks.named('runGametest')
 }
