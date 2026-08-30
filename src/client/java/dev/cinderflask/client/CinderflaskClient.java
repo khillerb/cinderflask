@@ -7,12 +7,16 @@ import dev.cinderflask.net.ConfigSync;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreens;
 import net.minecraft.client.item.ModelPredicateProviderRegistry;
-import net.minecraft.util.math.MathHelper;
 
 public final class CinderflaskClient implements ClientModInitializer {
+    /** The liquid is layer 1 of the model, so a generated model gives it tint index 1. */
+    private static final int LIQUID_TINT = 1;
+
     @Override
     public void onInitializeClient() {
         HandledScreens.register(Cinderflask.SCREEN_HANDLER, CinderflaskScreen::new);
@@ -23,24 +27,21 @@ public final class CinderflaskClient implements ClientModInitializer {
 
         ModelPredicateProviderRegistry.register(
                 Cinderflask.CINDERFLASK,
-                Cinderflask.id("embers"),
-                (stack, world, entity, seed) -> {
-                    int embers = CinderflaskItem.getEmbers(stack);
-                    int max = CinderflaskConfig.get().maxEmbers;
+                Cinderflask.id("fill"),
+                (stack, world, entity, seed) -> CinderflaskItem.fillOf(stack));
 
-                    if (embers <= 0 || max <= 0) {
-                        return 0.0F;
-                    }
-
-                    // The cap is ~97 stacks of coal, so a few items round to zero. Floor a
-                    // non-empty flask at the first override so it never looks empty.
-                    return MathHelper.clamp((float) embers / max, 0.01F, 1.0F);
-                });
+        // One greyscale liquid sprite serves every brew; the colour comes from the humours, the way
+        // vanilla tints potions.
+        ColorProviderRegistry.ITEM.register(
+                (stack, tintIndex) -> tintIndex == LIQUID_TINT
+                        ? 0xFF000000 | CinderflaskItem.colourOf(stack, MinecraftClient.getInstance().world)
+                        : 0xFFFFFFFF,
+                Cinderflask.CINDERFLASK);
 
         ClientPlayNetworking.registerGlobalReceiver(ConfigSync.CHANNEL, (client, handler, buf, sender) -> {
-            int ticksPerOperation = buf.readVarInt();
-            int maxEmbers = buf.readVarInt();
-            client.execute(() -> CinderflaskConfig.applyServerValues(ticksPerOperation, maxEmbers));
+            int sipCooldownTicks = buf.readVarInt();
+            int ticksPerPhase = buf.readVarInt();
+            client.execute(() -> CinderflaskConfig.applyServerValues(sipCooldownTicks, ticksPerPhase));
         });
 
         // Leaving a server that had retuned the numbers must not leave them stuck on the client.

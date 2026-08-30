@@ -14,26 +14,21 @@ import java.nio.file.Path;
 /**
  * Plain JSON, so the only dependency stays Fabric API.
  *
- * <p>{@link #ticksPerOperation} and {@link #maxEmbers} drive both burn behaviour and tooltip maths,
- * so the server pushes them to joining clients (see {@code dev.cinderflask.net.ConfigSync}). What is
- * here is the singleplayer and fallback source.
+ * <p>Both values change what a brew does, so the server pushes them to joining clients (see
+ * {@code dev.cinderflask.net.ConfigSync}). What is here is the singleplayer and fallback source.
  */
 public final class CinderflaskConfig {
-    /** Burn ticks the flask spends per furnace ignition. 200 = exactly one vanilla smelt. */
-    public int ticksPerOperation = 200;
-    /** Maximum burn ticks the flask can hold. 10,000,000 ~= 6,250 coal ~= 97 stacks. */
-    public int maxEmbers = 10_000_000;
-    /** Whether sneak + right-click vacuums all valid fuel out of the player's inventory. */
-    public boolean enableShiftFill = true;
-    /** Whether sparking consumes the mob. Disable for a gentler, farm-friendly pack. */
-    public boolean consumeSparkSource = true;
+    /** Shared lockout after a sip, across every flask. Carrying a second bottle is the answer. */
+    public int sipCooldownTicks = 60;
+    /** Ticks in one phase of the wheel. 12,000 is half a day, so a full turn is two days. */
+    public int ticksPerPhase = 12_000;
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static volatile CinderflaskConfig active = new CinderflaskConfig();
 
     // Snapshot of the on-disk values, so a server override can be undone without touching the file.
-    private static int localTicksPerOperation = new CinderflaskConfig().ticksPerOperation;
-    private static int localMaxEmbers = new CinderflaskConfig().maxEmbers;
+    private static int localSipCooldownTicks = new CinderflaskConfig().sipCooldownTicks;
+    private static int localTicksPerPhase = new CinderflaskConfig().ticksPerPhase;
 
     public static CinderflaskConfig get() {
         return active;
@@ -62,19 +57,19 @@ public final class CinderflaskConfig {
 
         loaded.sanitize();
         active = loaded;
-        localTicksPerOperation = loaded.ticksPerOperation;
-        localMaxEmbers = loaded.maxEmbers;
+        localSipCooldownTicks = loaded.sipCooldownTicks;
+        localTicksPerPhase = loaded.ticksPerPhase;
         save();
     }
 
     private void sanitize() {
-        if (ticksPerOperation < 100) {
-            Cinderflask.LOGGER.warn("ticksPerOperation was {}, clamping to the minimum of 100.", ticksPerOperation);
-            ticksPerOperation = 100;
+        if (sipCooldownTicks < 0) {
+            Cinderflask.LOGGER.warn("sipCooldownTicks was {}, clamping to 0.", sipCooldownTicks);
+            sipCooldownTicks = 0;
         }
-        if (maxEmbers < ticksPerOperation) {
-            Cinderflask.LOGGER.warn("maxEmbers was {}, raising it to ticksPerOperation ({}).", maxEmbers, ticksPerOperation);
-            maxEmbers = ticksPerOperation;
+        if (ticksPerPhase < 200) {
+            Cinderflask.LOGGER.warn("ticksPerPhase was {}, clamping to the minimum of 200.", ticksPerPhase);
+            ticksPerPhase = 200;
         }
     }
 
@@ -89,14 +84,14 @@ public final class CinderflaskConfig {
     }
 
     /** Applies the two server-authoritative numbers received on join. Client-side only. */
-    public static void applyServerValues(int ticksPerOperation, int maxEmbers) {
+    public static void applyServerValues(int sipCooldownTicks, int ticksPerPhase) {
         CinderflaskConfig config = active;
-        config.ticksPerOperation = ticksPerOperation;
-        config.maxEmbers = maxEmbers;
+        config.sipCooldownTicks = sipCooldownTicks;
+        config.ticksPerPhase = ticksPerPhase;
     }
 
     /** Restores the on-disk values after leaving a server that overrode them. Client-side only. */
     public static void restoreLocalValues() {
-        applyServerValues(localTicksPerOperation, localMaxEmbers);
+        applyServerValues(localSipCooldownTicks, localTicksPerPhase);
     }
 }

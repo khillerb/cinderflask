@@ -4,9 +4,9 @@
     "layer0": "cinderflask:item/cinderflask"
   },
   "overrides": [
-    { "predicate": { "cinderflask:embers": 0.01 }, "model": "cinderflask:item/cinderflask_quarter" },
-    { "predicate": { "cinderflask:embers": 0.25 }, "model": "cinderflask:item/cinderflask_half" },
-    { "predicate": { "cinderflask:embers": 0.5 },  "model": "cinderflask:item/cinderflask_3quarter" },
-    { "predicate": { "cinderflask:embers": 0.75 }, "model": "cinderflask:item/cinderflask_full" }
+    { "predicate": { "cinderflask:fill": 0.01 }, "model": "cinderflask:item/cinderflask_1" },
+    { "predicate": { "cinderflask:fill": 0.25 }, "model": "cinderflask:item/cinderflask_2" },
+    { "predicate": { "cinderflask:fill": 0.5 },  "model": "cinderflask:item/cinderflask_3" },
+    { "predicate": { "cinderflask:fill": 0.75 }, "model": "cinderflask:item/cinderflask_4" }
   ]
 }

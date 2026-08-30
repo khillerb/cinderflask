@@ -33,6 +33,7 @@ public class CinderflaskScreenHandler extends ScreenHandler {
         this.player = playerInventory.player;
         this.hand = hand;
         this.intake = new CinderflaskInventory(getFlask(), !player.getWorld().isClient);
+        this.intake.onAdded(this::foldIn);
 
         addSlot(new IntakeSlot(intake, 0, INTAKE_SLOT_X, INTAKE_SLOT_Y));
 
@@ -118,6 +119,19 @@ public class CinderflaskScreenHandler extends ScreenHandler {
         }
     }
 
+    /** Folds one ingredient into the brew, consuming it. */
+    private void foldIn(ItemStack flask, ItemStack ingredient) {
+        dev.cinderflask.brew.IngredientTable.Entry entry =
+                dev.cinderflask.brew.IngredientTable.lookup(ingredient);
+
+        if (entry == null || !(flask.getItem() instanceof CinderflaskItem vessel)) {
+            return;
+        }
+
+        dev.cinderflask.brew.Brewing.add(flask, entry, player.getWorld(), vessel.ceiling());
+        ingredient.decrement(1);
+    }
+
     /** Rejects anything the flask will not swallow, so the click simply does not happen. */
     private static class IntakeSlot extends Slot {
         IntakeSlot(CinderflaskInventory inventory, int index, int x, int y) {
@@ -126,7 +140,7 @@ public class CinderflaskScreenHandler extends ScreenHandler {
 
         @Override
         public boolean canInsert(ItemStack stack) {
-            return CinderflaskItem.isValidFuel(stack);
+            return dev.cinderflask.brew.IngredientTable.isIngredient(stack);
         }
     }
 }

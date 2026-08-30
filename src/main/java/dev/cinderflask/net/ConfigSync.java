@@ -9,8 +9,8 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
 
 /**
- * Sends the two numbers that drive tooltip maths to joining clients, so a server that has retuned
- * {@code ticksPerOperation} does not leave players reading wrong numbers.
+ * Sends the two numbers that change what a brew does to joining clients, so a server that has
+ * retuned the clock does not leave players reading wrong ages.
  */
 public final class ConfigSync {
     public static final Identifier CHANNEL = Cinderflask.id("config");
@@ -26,8 +26,8 @@ public final class ConfigSync {
 
             CinderflaskConfig config = CinderflaskConfig.get();
             PacketByteBuf buf = PacketByteBufs.create();
-            buf.writeVarInt(config.ticksPerOperation);
-            buf.writeVarInt(config.maxEmbers);
+            buf.writeVarInt(config.sipCooldownTicks);
+            buf.writeVarInt(config.ticksPerPhase);
             sender.sendPacket(CHANNEL, buf);
         });
     }

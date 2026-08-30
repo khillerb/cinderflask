@@ -27,7 +27,7 @@
     },
     "has_the_recipe": {
       "conditions": {
-        "recipe": "cinderflask:empty_cinderflask"
+        "recipe": "cinderflask:cinderflask"
       },
       "trigger": "minecraft:recipe_unlocked"
     }
@@ -41,7 +41,7 @@
   ],
   "rewards": {
     "recipes": [
-      "cinderflask:empty_cinderflask"
+      "cinderflask:cinderflask"
     ]
   },
   "sends_telemetry_event": false

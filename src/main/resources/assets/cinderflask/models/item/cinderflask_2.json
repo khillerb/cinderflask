@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "cinderflask:item/cinderflask",
+    "layer1": "cinderflask:item/cinderflask_liquid_2"
+  }
+}

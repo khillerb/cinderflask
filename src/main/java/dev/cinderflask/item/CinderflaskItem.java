@@ -1,23 +1,24 @@
 package dev.cinderflask.item;
 
+import dev.cinderflask.brew.Brew;
+import dev.cinderflask.brew.BrewEffects;
+import dev.cinderflask.brew.BrewNbt;
+import dev.cinderflask.brew.Humours;
+import dev.cinderflask.brew.Temper;
 import dev.cinderflask.config.CinderflaskConfig;
 import dev.cinderflask.screen.CinderflaskScreenHandlerFactory;
-import dev.cinderflask.tag.CinderflaskTags;
-import net.fabricmc.fabric.api.item.v1.FabricItem;
 import net.minecraft.client.item.TooltipContext;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.UseAction;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,14 +26,18 @@ import java.util.List;
 import java.util.function.BooleanSupplier;
 
 /**
- * Stores burn ticks and gives a furnace one operation at a time.
+ * The flask. Holds a sealed brew and gives you one dose at a time.
  *
- * <p>{@link #getRecipeRemainder(ItemStack)} is what does it: the furnace consumes the flask as fuel
- * and Fabric API's stack-aware remainder puts a copy back in the slot, minus one operation.
- * {@link dev.cinderflask.mixin.AbstractFurnaceBlockEntityMixin} caps what it charges.
+ * <p>Nothing about the brew's state is stored except what went in, when it was sealed and what vessel
+ * it is in. Everything read here is worked out from those on the spot, so a flask ages correctly
+ * whether it is in your hand or forgotten in a chest, without anything having to tick.
  */
-public class CinderflaskItem extends Item implements FabricItem {
-    public static final String EMBERS_KEY = "Embers";
+public class CinderflaskItem extends Item {
+    /** Fast enough to drink mid-fight. */
+    public static final int SIP_TICKS = 12;
+
+    /** How much of this vessel body ingredients may fill. The upgrade path is more of this. */
+    private final float ceiling;
 
     /**
      * Set to {@code Screen::hasShiftDown} by the client entrypoint. Stays false on a dedicated
@@ -40,155 +45,140 @@ public class CinderflaskItem extends Item implements FabricItem {
      */
     public static BooleanSupplier detailModifierHeld = () -> false;
 
-    public CinderflaskItem(Settings settings) {
+    public CinderflaskItem(Settings settings, float ceiling) {
         super(settings);
+        this.ceiling = ceiling;
     }
 
-    public static int getEmbers(ItemStack stack) {
-        NbtCompound nbt = stack.getNbt();
-        if (nbt == null || !nbt.contains(EMBERS_KEY, NbtElement.INT_TYPE)) {
-            return 0;
-        }
-        return Math.max(0, nbt.getInt(EMBERS_KEY));
+    public float ceiling() {
+        return ceiling;
     }
 
-    public static void setEmbers(ItemStack stack, int embers) {
-        int clamped = MathHelper.clamp(embers, 0, CinderflaskConfig.get().maxEmbers);
+    // -------------------------------------------------------------------------------------------
+    // Drinking
+    // -------------------------------------------------------------------------------------------
 
-        if (clamped == 0) {
-            // Drop the key so a spent flask stacks with a fresh one.
-            NbtCompound nbt = stack.getNbt();
-            if (nbt != null) {
-                nbt.remove(EMBERS_KEY);
-                if (nbt.isEmpty()) {
-                    stack.setNbt(null);
-                }
-            }
-        } else {
-            stack.getOrCreateNbt().putInt(EMBERS_KEY, clamped);
-        }
-    }
-
-    /** How many furnace operations the flask can still pay for. */
-    public static int operationsRemaining(ItemStack stack) {
-        return getEmbers(stack) / CinderflaskConfig.get().ticksPerOperation;
-    }
-
-    /** Takes as much of {@code fuel} as fits under the cap. Mutates both stacks. */
-    public static void addFuel(ItemStack flask, ItemStack fuel) {
-        int perItem = FuelTimes.of(fuel);
-        if (perItem <= 0) {
-            return;
-        }
-
-        int max = CinderflaskConfig.get().maxEmbers;
-        int current = getEmbers(flask);
-        int added = 0;
-
-        while (!fuel.isEmpty() && current + added + perItem <= max) {
-            added += perItem;
-            fuel.decrement(1);
-        }
-
-        if (added > 0) {
-            setEmbers(flask, current + added);
-        }
-    }
-
-    /** Spends one operation's worth of embers. Returns false if the flask cannot cover one. */
-    public static boolean consumeOne(ItemStack flask) {
-        int perOperation = CinderflaskConfig.get().ticksPerOperation;
-        int current = getEmbers(flask);
-
-        if (current < perOperation) {
-            return false;
-        }
-
-        setEmbers(flask, current - perOperation);
-        return true;
-    }
-
-    /**
-     * Furnace fuel, but not another flask, not anything that would hand back a container
-     * (buckets, bottles), and not anything in the deny tag.
-     */
-    public static boolean isValidFuel(ItemStack stack) {
-        return !(stack.getItem() instanceof CinderflaskItem)
-                && FuelTimes.of(stack) > 0
-                && stack.getRecipeRemainder().isEmpty()
-                && !stack.isIn(CinderflaskTags.EMBER_DENY);
+    @Override
+    public UseAction getUseAction(ItemStack stack) {
+        return UseAction.DRINK;
     }
 
     @Override
-    public ItemStack getRecipeRemainder(ItemStack stack) {
-        ItemStack remainder = stack.copy();
-        consumeOne(remainder);
-        return remainder;
+    public int getMaxUseTime(ItemStack stack) {
+        return SIP_TICKS;
     }
 
     @Override
     public TypedActionResult<ItemStack> use(World world, PlayerEntity player, Hand hand) {
         ItemStack stack = player.getStackInHand(hand);
 
-        if (world.isClient) {
-            return TypedActionResult.success(stack);
-        }
-
-        if (player.isSneaking() && CinderflaskConfig.get().enableShiftFill) {
-            if (drainInventory(player, stack) <= 0) {
-                player.sendMessage(Text.translatable("cinderflask.message.nothing_to_burn")
-                        .formatted(Formatting.GRAY), true);
-                return TypedActionResult.fail(stack);
+        // Sipping is the common action so it gets the plain click; sneaking opens the intake.
+        if (player.isSneaking()) {
+            if (!world.isClient) {
+                player.openHandledScreen(new CinderflaskScreenHandlerFactory(hand));
             }
-
-            world.playSound(null, player.getX(), player.getY(), player.getZ(),
-                    SoundEvents.ITEM_FIRECHARGE_USE, SoundCategory.PLAYERS, 0.5F, 1.6F);
-            return TypedActionResult.success(stack);
+            return TypedActionResult.success(stack, world.isClient);
         }
 
-        player.openHandledScreen(new CinderflaskScreenHandlerFactory(hand));
-        return TypedActionResult.success(stack);
+        if (BrewNbt.doses(stack) <= 0) {
+            if (!world.isClient) {
+                player.sendMessage(Text.translatable("cinderflask.message.empty")
+                        .formatted(Formatting.GRAY), true);
+            }
+            return TypedActionResult.fail(stack);
+        }
+
+        player.setCurrentHand(hand);
+        return TypedActionResult.consume(stack);
     }
 
-    /** Empties every valid fuel out of the player's inventory. Returns the embers gained. */
-    private static int drainInventory(PlayerEntity player, ItemStack flask) {
-        PlayerInventory inventory = player.getInventory();
-        int before = getEmbers(flask);
-
-        for (int slot = 0; slot < inventory.size(); slot++) {
-            ItemStack candidate = inventory.getStack(slot);
-
-            if (candidate != flask && isValidFuel(candidate)) {
-                addFuel(flask, candidate);
-
-                if (candidate.isEmpty()) {
-                    inventory.setStack(slot, ItemStack.EMPTY);
-                }
-            }
+    @Override
+    public ItemStack finishUsing(ItemStack stack, World world, LivingEntity drinker) {
+        if (world.isClient) {
+            return stack;
         }
 
-        return getEmbers(flask) - before;
+        Brew brew = BrewNbt.read(stack, world);
+        int doses = BrewNbt.doses(stack);
+
+        if (brew == null || doses <= 0) {
+            return stack;
+        }
+
+        BrewEffects.apply(drinker, brew);
+
+        int remaining = doses - 1;
+        BrewNbt.setDoses(stack, remaining);
+        if (remaining <= 0) {
+            BrewNbt.empty(stack);
+        }
+
+        if (drinker instanceof PlayerEntity player) {
+            player.getItemCooldownManager().set(this, CinderflaskConfig.get().sipCooldownTicks);
+        }
+
+        world.playSound(null, drinker.getX(), drinker.getY(), drinker.getZ(),
+                SoundEvents.ENTITY_GENERIC_DRINK, SoundCategory.PLAYERS, 0.6F, 1.1F);
+
+        return stack;
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // Reading the flask
+    // -------------------------------------------------------------------------------------------
+
+    /** Packed RGB for the liquid layer, soured towards the murk by corruption. */
+    public static int colourOf(ItemStack stack, @Nullable World world) {
+        Brew brew = BrewNbt.read(stack, world);
+        return brew == null
+                ? 0xFFFFFF
+                : Humours.soured(brew.current().colour(), brew.corruption());
+    }
+
+    /** How full the flask reads, from 0 to 1. Drives the fill model. */
+    public static float fillOf(ItemStack stack) {
+        int doses = BrewNbt.doses(stack);
+        return doses <= 0 ? 0 : Math.min(1, doses / 12f);
     }
 
     @Override
     public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
-        int embers = getEmbers(stack);
-
-        if (detailModifierHeld.getAsBoolean()) {
-            tooltip.add(Text.translatable("cinderflask.tooltip.embers_ticks", format(embers))
-                    .formatted(Formatting.GOLD));
-        } else {
-            tooltip.add(Text.translatable("cinderflask.tooltip.embers", format(operationsRemaining(stack)))
-                    .formatted(Formatting.GOLD));
+        Temper temper = BrewNbt.temper(stack);
+        if (temper != Temper.UNTEMPERED) {
+            tooltip.add(Text.translatable(temper.translationKey()).formatted(Formatting.DARK_AQUA));
         }
 
-        tooltip.add(Text.translatable(embers > 0
-                ? "cinderflask.tooltip.lore.lit"
-                : "cinderflask.tooltip.lore.unlit").formatted(Formatting.GRAY));
+        Brew brew = BrewNbt.read(stack, world);
+        if (brew == null) {
+            tooltip.add(Text.translatable("cinderflask.tooltip.empty").formatted(Formatting.GRAY));
+            return;
+        }
+
+        tooltip.add(Text.translatable("cinderflask.tooltip.doses", BrewNbt.doses(stack))
+                .formatted(Formatting.GOLD));
+
+        if (brew.isSpoiled()) {
+            tooltip.add(Text.translatable("cinderflask.tooltip.ruined").formatted(Formatting.DARK_GRAY));
+            return;
+        }
+
+        // Phase 7 gates this behind the Palate. Until then the numbers are simply shown on shift.
+        if (detailModifierHeld.getAsBoolean()) {
+            Humours now = brew.current();
+            tooltip.add(Text.translatable("cinderflask.tooltip.humours",
+                    fmt(now.choleric()), fmt(now.melancholic()),
+                    fmt(now.sanguine()), fmt(now.phlegmatic())).formatted(Formatting.GRAY));
+            tooltip.add(Text.translatable("cinderflask.tooltip.reach",
+                    fmt(now.quintessence())).formatted(Formatting.GRAY));
+            tooltip.add(Text.translatable("cinderflask.tooltip.age",
+                    fmt(brew.phase()), fmt(brew.corruption())).formatted(Formatting.DARK_GRAY));
+        } else {
+            tooltip.add(Text.translatable("cinderflask.tooltip.strength",
+                    brew.amplifier() + 1, fmt(brew.durationTicks() / 20f)).formatted(Formatting.GRAY));
+        }
     }
 
-    /** Thousands separators; ember counts run to seven digits. */
-    public static String format(int value) {
-        return String.format("%,d", value);
+    private static String fmt(float value) {
+        return String.format("%.1f", value);
     }
 }

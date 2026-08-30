@@ -4,10 +4,16 @@
 
 A Fabric 1.20.1 mod. Requires Fabric API.
 
+> **2.0 is being built in the open and this README still describes 1.0 below.** The fuel mechanic is
+> gone. The flask now holds a *brew* made of five essences — four humours that rotate as it ages, and
+> a quintessence that decides how far it reaches — and you sip one dose at a time. The full rewrite of
+> this file lands with the rest of the presentation work; until then the design lives in the plan, and
+> `dev.cinderflask.brew` is the part that is real.
+
 A flask that stores fuel and feeds a furnace one smelt at a time, so nothing is over-burned. Craft it
 empty, then take a spark from a firefly, blaze or magma cube.
 
-![The six ember states, empty through full](docs/preview.png)
+![The four humours, at four fill levels each](docs/preview.png)
 
 ```
  G       G = Gold Ingot           Empty Cinderflask

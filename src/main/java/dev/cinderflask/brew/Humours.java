@@ -22,6 +22,11 @@ public record Humours(float choleric, float melancholic, float sanguine, float p
     /** Positions on the wheel, in rotation order. Quintessence is deliberately absent. */
     public static final int WHEEL = 4;
 
+    /** Choleric amber, melancholic violet, sanguine red, phlegmatic grey-green. */
+    private static final int[] PALETTE = {0xD9822B, 0x4A2C6B, 0xA31E28, 0x8FA88C};
+    private static final int AETHER = 0xE8E0C0;
+    private static final int MURK = 0x2B2118;
+
     public Humours {
         choleric = Math.max(0, choleric);
         melancholic = Math.max(0, melancholic);
@@ -210,6 +215,48 @@ public record Humours(float choleric, float melancholic, float sanguine, float p
                 + (double) sanguine * sanguine
                 + (double) phlegmatic * phlegmatic
                 + (double) quintessence * quintessence);
+    }
+
+    /**
+     * The blended colour of the five essences, as packed RGB. Quintessence counts here even though it
+     * stays off the wheel, because a far-reaching brew visibly glows paler.
+     */
+    public int colour() {
+        float total = magnitude() + quintessence;
+        if (total <= 0) {
+            return MURK;
+        }
+
+        float red = 0;
+        float green = 0;
+        float blue = 0;
+
+        for (int i = 0; i < WHEEL; i++) {
+            float share = wheel(i) / total;
+            red += ((PALETTE[i] >> 16) & 0xFF) * share;
+            green += ((PALETTE[i] >> 8) & 0xFF) * share;
+            blue += (PALETTE[i] & 0xFF) * share;
+        }
+
+        float aether = quintessence / total;
+        red += ((AETHER >> 16) & 0xFF) * aether;
+        green += ((AETHER >> 8) & 0xFF) * aether;
+        blue += (AETHER & 0xFF) * aether;
+
+        return pack(Math.round(red), Math.round(green), Math.round(blue));
+    }
+
+    /** Drags a colour towards the murk. Corruption is visible before you taste it. */
+    public static int soured(int colour, float corruption) {
+        float t = Math.min(1, Math.max(0, corruption));
+        return pack(
+                Math.round(((colour >> 16) & 0xFF) * (1 - t) + ((MURK >> 16) & 0xFF) * t),
+                Math.round(((colour >> 8) & 0xFF) * (1 - t) + ((MURK >> 8) & 0xFF) * t),
+                Math.round((colour & 0xFF) * (1 - t) + (MURK & 0xFF) * t));
+    }
+
+    private static int pack(int red, int green, int blue) {
+        return (Math.min(255, red) << 16) | (Math.min(255, green) << 8) | Math.min(255, blue);
     }
 
     public boolean isEmpty() {

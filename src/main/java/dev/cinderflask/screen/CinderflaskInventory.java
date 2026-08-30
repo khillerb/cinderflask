@@ -1,14 +1,14 @@
 package dev.cinderflask.screen;
 
-import dev.cinderflask.item.CinderflaskItem;
+import dev.cinderflask.brew.IngredientTable;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 
 /**
- * The flask's single intake slot. Anything dropped in is absorbed immediately.
+ * The flask's single intake slot. Anything dropped in is folded into the brew immediately.
  *
- * <p>Absorption is server-side only; on the client this just mirrors what the server last sent.
+ * <p>Server-side only; on the client this just mirrors what the server last sent.
  */
 public class CinderflaskInventory implements Inventory {
     private final ItemStack flask;
@@ -17,9 +17,16 @@ public class CinderflaskInventory implements Inventory {
     private ItemStack contents = ItemStack.EMPTY;
     private boolean reentrant;
 
+    private java.util.function.BiConsumer<ItemStack, ItemStack> onAdded = (flask, ingredient) -> { };
+
     public CinderflaskInventory(ItemStack flask, boolean absorbing) {
         this.flask = flask;
         this.absorbing = absorbing;
+    }
+
+    /** How a dropped-in ingredient actually reaches the brew. Set by the screen handler. */
+    public void onAdded(java.util.function.BiConsumer<ItemStack, ItemStack> handler) {
+        this.onAdded = handler;
     }
 
     @Override
@@ -30,7 +37,7 @@ public class CinderflaskInventory implements Inventory {
 
         reentrant = true;
         try {
-            CinderflaskItem.addFuel(flask, contents);
+            onAdded.accept(flask, contents);
 
             if (contents.isEmpty()) {
                 contents = ItemStack.EMPTY;
@@ -93,7 +100,7 @@ public class CinderflaskInventory implements Inventory {
 
     @Override
     public boolean isValid(int slot, ItemStack stack) {
-        return slot == 0 && CinderflaskItem.isValidFuel(stack);
+        return slot == 0 && IngredientTable.isIngredient(stack);
     }
 
     @Override

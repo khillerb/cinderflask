@@ -43,9 +43,15 @@ PALETTE = {
     "5": (245, 150, 30, 255),     # ember, amber
     "6": (255, 196, 74, 255),     # ember, gold
     "7": (255, 231, 156, 255),    # ember, pale core
-    "o": (198, 76, 15, 255),      # ember, mid (mote + bar)
-    "a": (246, 156, 32, 255),     # ember, bright (mote + bar)
-    "y": (255, 224, 138, 255),    # ember, core (mote + bar)
+    "o": (198, 76, 15, 255),      # ember, mid (bar only)
+    "a": (246, 156, 32, 255),     # ember, bright (bar only)
+    "y": (255, 224, 138, 255),    # ember, core (bar only)
+
+    # The liquid layer is drawn in greyscale and multiplied by the brew's colour at render time,
+    # so white is "full colour here" and the darker steps are what give the pool its depth.
+    "W": (255, 255, 255, 255),
+    "M": (206, 206, 206, 255),
+    "D": (162, 162, 162, 255),
 }
 
 # Hottest last, so an index walks the ramp upwards.
@@ -118,48 +124,32 @@ def hash_jitter(x: int, y: int) -> float:
     return ((h ^ (h >> 16)) & 0xFFFF) / 65_536.0
 
 
-def pour_embers(grid: list[list[str]], fill: int) -> None:
-    """Fills the bottom `fill` body rows with a swirling, dithered ember mass.
+def liquid(level: int) -> list[str]:
+    """The liquid alone, greyscale, on a transparent field. Layer 1 of the item model.
 
-    Colour comes from a spiral: an arm term from the angle around the pool centre, a band term from
-    the radius, plus noise to break up the banding. The top filled row is biased hot so the fill
-    level still reads at a glance in an inventory slot.
+    Only the body rows are filled, bottom up. The surface reads brightest and it darkens with depth,
+    so a tinted brew still looks like a pool rather than a flat block of colour.
     """
-    rows = EMBER_ROWS[:fill]
-    surface = rows[-1]
-
-    spans = {y: PROFILE[y] for y in rows}
-    centre_x = sum((left + right) / 2 for left, right, _ in spans.values()) / len(spans)
-    centre_y = sum(rows) / len(rows)
+    grid = blank()
+    rows = EMBER_ROWS[:level]
+    surface = rows[-1] if rows else -1
 
     for y in rows:
-        left, right, _ = spans[y]
-
+        left, right, _ = PROFILE[y]
         for x in range(left + 1, right):
-            dx = x - centre_x
-            # The pool is much wider than tall, so stretch y or the spiral reads as stripes.
-            dy = (y - centre_y) * 2.6
-
-            radius = math.hypot(dx, dy)
-            angle = math.atan2(dy, dx) / (2 * math.pi)
-
-            swirl = (angle * SWIRL_ARMS + radius * SWIRL_BANDS + hash_jitter(x, y) * SWIRL_NOISE) % 1.0
-
-            # The spiral picks the colour; heat only nudges it, or a shallow pool blows out white.
-            index = int(swirl * (len(EMBER_RAMP) - 2))
-
             if y == surface:
-                # Floored, not just lifted: at one row deep the whole pool is surface, and a dark
-                # swirl there reads as empty.
-                index = max(index + 1, 3)
+                shade = "W"
+            elif y == EMBER_ROWS[0]:
+                shade = "D"
+            else:
+                shade = "M"
+            grid[y][x] = shade
 
-            if radius > 3.4:
-                index -= 1
-
-            grid[y][x] = EMBER_RAMP[max(0, min(len(EMBER_RAMP) - 1, index))]
+    return ["".join(row) for row in grid]
 
 
-def flask(fill: int = 0, mote: bool = False, cold: bool = False) -> list[str]:
+def shell() -> list[str]:
+    """The vessel with nothing in it. Layer 0, never tinted."""
     grid = blank()
 
     for y, (left, right, kind) in enumerate(PROFILE):
@@ -180,23 +170,6 @@ def flask(fill: int = 0, mote: bool = False, cold: bool = False) -> list[str]:
                 row[x] = "S"
         else:
             glass_row(row, left, right, streak=y in STREAK_ROWS)
-
-    if fill > 0:
-        pour_embers(grid, fill)
-
-    if mote:
-        grid[12][7] = "y"
-        grid[12][6] = "a"
-        grid[12][8] = "a"
-        grid[11][7] = "o"
-        grid[13][7] = "o"
-
-    if cold:
-        chill = {"l": "D", "L": "C", "w": "L", "h": "g", "g": "G"}
-        for y, row in enumerate(grid):
-            for x, key in enumerate(row):
-                if key in chill:
-                    grid[y][x] = chill[key]
 
     return ["".join(row) for row in grid]
 
@@ -286,34 +259,60 @@ def icon() -> Image.Image:
     drawing.rectangle([0, 0, 127, 127], outline=EDGE)
     drawing.rectangle([3, 3, 124, 124], outline=BORDER)
 
-    art = draw(flask(fill=4)).resize((112, 112), Image.NEAREST)
+    art = draw(shell()).resize((112, 112), Image.NEAREST)
+    tinted = draw(liquid(4)).resize((112, 112), Image.NEAREST)
+    tinted = Image.merge("RGBA", (*[
+        channel.point(lambda v, m=multiplier: int(v * m / 255))
+        for channel, multiplier in zip(tinted.split()[:3], (0xD9, 0x82, 0x2B))
+    ], tinted.split()[3]))
+
     image.paste(art, (8, 8), art)
+    image.paste(tinted, (8, 8), tinted)
     return image
 
 
+BREW_COLOURS = {
+    "choleric": 0xD9822B,
+    "melancholic": 0x4A2C6B,
+    "sanguine": 0xA31E28,
+    "phlegmatic": 0x8FA88C,
+}
+
+
+def tint(sprite: Image.Image, colour: int) -> Image.Image:
+    """What the game does at render time: multiply the greyscale liquid by the brew's colour."""
+    red, green, blue, alpha = sprite.split()
+    channels = []
+    for channel, shift in ((red, 16), (green, 8), (blue, 0)):
+        multiplier = (colour >> shift) & 0xFF
+        channels.append(channel.point(lambda v, m=multiplier: int(v * m / 255)))
+    return Image.merge("RGBA", (*channels, alpha))
+
+
 def preview(states: dict[str, Image.Image]) -> Image.Image:
-    """The README image, generated with the art so it cannot drift."""
-    labels = [
-        ("empty_cinderflask", "empty"),
-        ("cinderflask", "sparked"),
-        ("cinderflask_quarter", "quarter"),
-        ("cinderflask_half", "half"),
-        ("cinderflask_3quarter", "3/4"),
-        ("cinderflask_full", "full"),
-    ]
+    """The README image: the same four fill levels under each of the four humours."""
+    scale = 64
+    gap = 8
+    labels = list(BREW_COLOURS)
 
-    scale = 80
-    gap = 10
-    width = len(labels) * (scale + gap) + gap
+    width = gap + 4 * (scale + gap)
+    height = gap + len(labels) * (scale + gap) + gap
 
-    image = Image.new("RGBA", (width, scale + gap * 3), PANEL)
+    image = Image.new("RGBA", (width, height), PANEL)
     drawing = ImageDraw.Draw(image)
+    shell_art = states["cinderflask"].resize((scale, scale), Image.NEAREST)
 
-    for index, (key, label) in enumerate(labels):
-        art = states[key].resize((scale, scale), Image.NEAREST)
-        x = gap + index * (scale + gap)
-        image.paste(art, (x, gap), art)
-        drawing.text((x + 2, scale + gap + 4), label, fill=(196, 196, 208, 255))
+    for row, name in enumerate(labels):
+        y = gap + row * (scale + gap)
+        for level in range(1, 5):
+            x = gap + (level - 1) * (scale + gap)
+            image.paste(shell_art, (x, y), shell_art)
+
+            pool = states["cinderflask_liquid_" + str(level)].resize((scale, scale), Image.NEAREST)
+            pool = tint(pool, BREW_COLOURS[name])
+            image.paste(pool, (x, y), pool)
+
+        drawing.text((gap + 2, y + scale - 8), name, fill=(196, 196, 208, 255))
 
     return image
 
@@ -323,14 +322,9 @@ def main() -> None:
     os.makedirs(GUI_DIR, exist_ok=True)
     os.makedirs(DOCS_DIR, exist_ok=True)
 
-    states = {
-        "empty_cinderflask": draw(flask(cold=True)),
-        "cinderflask": draw(flask(mote=True)),
-        "cinderflask_quarter": draw(flask(fill=1)),
-        "cinderflask_half": draw(flask(fill=2)),
-        "cinderflask_3quarter": draw(flask(fill=3)),
-        "cinderflask_full": draw(flask(fill=4)),
-    }
+    states = {"cinderflask": draw(shell())}
+    for level in range(1, 5):
+        states["cinderflask_liquid_" + str(level)] = draw(liquid(level))
 
     written = {os.path.join(ITEM_DIR, name + ".png"): art for name, art in states.items()}
     written[os.path.join(GUI_DIR, "cinderflask.png")] = gui()
