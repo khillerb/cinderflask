@@ -9,7 +9,8 @@
   "entrypoints": {
     "fabric-gametest": [
       "dev.cinderflask.test.CinderflaskGameTest",
-      "dev.cinderflask.test.BrewingLoopTest"
+      "dev.cinderflask.test.BrewingLoopTest",
+      "dev.cinderflask.test.VesselLifeTest"
     ]
   },
   "depends": {

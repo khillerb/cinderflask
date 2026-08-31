@@ -1,0 +1,14 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "cinderflask:item/witch_iron_cinderflask",
+    "layer1": "cinderflask:item/cinderflask_liquid_0",
+    "layer2": "cinderflask:item/cinderflask_mote"
+  },
+  "overrides": [
+    { "predicate": { "cinderflask:fill": 0.01 }, "model": "cinderflask:item/witch_iron_cinderflask_1" },
+    { "predicate": { "cinderflask:fill": 0.25 }, "model": "cinderflask:item/witch_iron_cinderflask_2" },
+    { "predicate": { "cinderflask:fill": 0.5 },  "model": "cinderflask:item/witch_iron_cinderflask_3" },
+    { "predicate": { "cinderflask:fill": 0.75 }, "model": "cinderflask:item/witch_iron_cinderflask_4" }
+  ]
+}

@@ -194,6 +194,25 @@ public record Humours(float choleric, float melancholic, float sanguine, float p
         return (float) (entropy / Math.log(WHEEL));
     }
 
+    // How readily each humour escapes a cracked vessel. Choleric is the volatile one and goes
+    // first; melancholic is the patient one and barely moves. This is why a cracked flask drifts
+    // passive as it empties — no separate mechanic, just what leaks fastest.
+    private static final float[] VOLATILITY = {1.00f, 0.20f, 0.60f, 0.35f};
+
+    /**
+     * What is left after a crack has breathed off {@code fraction} of the brew.
+     *
+     * <p>Not a uniform scale: the hot humours vent first, so what remains is colder and slower than
+     * what went in.
+     */
+    public Humours vented(float fraction) {
+        float[] out = new float[WHEEL];
+        for (int i = 0; i < WHEEL; i++) {
+            out[i] = Math.max(0, wheel(i) * (1 - fraction * VOLATILITY[i]));
+        }
+        return fromWheel(out, quintessence);
+    }
+
     /** How likely the flask is to crack: hot and unbuttressed by anything patient. */
     public float volatility() {
         return choleric / (melancholic + 1);

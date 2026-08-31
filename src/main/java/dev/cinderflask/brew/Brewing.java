@@ -29,11 +29,38 @@ public final class Brewing {
         }
 
         Temper temper = BrewNbt.temper(flask);
-        Humours humours = base.humours().plus(temper.bias()).plus(Vessel.drift(flask));
+        Humours humours = base.humours().plus(temper.bias()).plus(Vessel.drift(flask))
+                .plus(innateReach(flask));
         float capacity = Math.min(ceiling, MINIMUM_CAPACITY + base.body());
 
         Brew brewed = new Brew(humours, 0, temper.corruption() + base.corruption(), capacity);
         BrewNbt.store(flask, brewed, brewed.doses());
+        return true;
+    }
+
+    /**
+     * Opens a brew on the dregs of an old one, which is what carries a fraction of its character and
+     * its age forward. The clock does not start until the new brew is corked, but it starts partway
+     * along — the only way to reach a deep phase without having waited for one.
+     */
+    public static boolean openWithDregs(ItemStack flask, ItemStack dregs, float ceiling) {
+        if (BrewNbt.hasBrew(flask)) {
+            return false;
+        }
+
+        Humours carried = Dregs.humours(dregs);
+        if (carried.isEmpty()) {
+            return false;
+        }
+
+        Temper temper = BrewNbt.temper(flask);
+        Humours humours = carried.plus(temper.bias()).plus(Vessel.drift(flask))
+                .plus(innateReach(flask));
+
+        Brew brewed = new Brew(humours, Dregs.phase(dregs), temper.corruption(),
+                Math.min(ceiling, MINIMUM_CAPACITY + 1));
+        BrewNbt.store(flask, brewed, brewed.doses());
+        BrewNbt.setCarriedPhase(flask, Dregs.phase(dregs));
         return true;
     }
 
@@ -79,6 +106,13 @@ public final class Brewing {
         Vessel.record(flask, brew.sealed());
         BrewNbt.cork(flask);
         return true;
+    }
+
+    /** What the vessel itself lends. Only the Aetherglass lends anything. */
+    private static Humours innateReach(ItemStack flask) {
+        return flask.getItem() instanceof dev.cinderflask.item.CinderflaskItem vessel
+                ? new Humours(0, 0, 0, 0, vessel.innateQuintessence())
+                : Humours.EMPTY;
     }
 
     /** Whether the flask could take this ingredient without overflowing the vessel. */

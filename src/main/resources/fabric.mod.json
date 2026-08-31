@@ -24,7 +24,13 @@
     ],
     "fabric-datagen": [
       "dev.cinderflask.datagen.CinderflaskDataGenerator"
+    ],
+    "emi": [
+      "dev.cinderflask.client.compat.emi.CinderflaskEmiPlugin"
     ]
+  },
+  "suggests": {
+    "emi": "*"
   },
   "mixins": [
     "cinderflask.mixins.json"

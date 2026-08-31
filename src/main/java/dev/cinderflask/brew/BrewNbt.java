@@ -26,6 +26,7 @@ public final class BrewNbt {
     private static final String HUMOURS = "H";
     private static final String SEALED_AT = "Sealed";
     private static final String CORKED = "Corked";
+    private static final String CARRIED_PHASE = "Carried";
     private static final String CORRUPTION = "Corruption";
     private static final String CAPACITY = "Capacity";
     private static final String DOSES = "Doses";
@@ -105,6 +106,24 @@ public final class BrewNbt {
                 .putLong(SEALED_AT, world.getTime() - (long) (brew.phase() * TICKS_PER_PHASE));
     }
 
+    /**
+     * Hands the flask an age to start from once its clock does start.
+     *
+     * <p>A working brew has no clock, and a crafting bench has no world — but dregs and solera both
+     * have to carry age forward across exactly those two gaps. The phase is parked here and cashed in
+     * by {@link #stampIfNeeded}, which is the moment the clock actually begins.
+     */
+    public static void setCarriedPhase(ItemStack stack, float phase) {
+        NbtCompound nbt = stack.getNbt();
+        if (nbt == null || !nbt.contains(ROOT, NbtElement.COMPOUND_TYPE)) {
+            return;
+        }
+
+        NbtCompound root = nbt.getCompound(ROOT);
+        root.putFloat(CARRIED_PHASE, Math.max(0, phase));
+        root.remove(SEALED_AT);
+    }
+
     public static boolean isCorked(ItemStack stack) {
         NbtCompound nbt = stack.getNbt();
         return nbt != null && nbt.contains(ROOT, NbtElement.COMPOUND_TYPE)
@@ -138,7 +157,11 @@ public final class BrewNbt {
             return false;
         }
 
-        root.putLong(SEALED_AT, world.getTime());
+        // Backdated by whatever age the brew arrived with, so dregs and solera get their head start
+        // at the moment the clock starts rather than losing it in the gap.
+        float carried = root.getFloat(CARRIED_PHASE);
+        root.putLong(SEALED_AT, world.getTime() - (long) (carried * TICKS_PER_PHASE));
+        root.remove(CARRIED_PHASE);
         return true;
     }
 

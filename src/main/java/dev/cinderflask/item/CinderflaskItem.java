@@ -4,6 +4,8 @@ import dev.cinderflask.Cinderflask;
 import dev.cinderflask.brew.Brew;
 import dev.cinderflask.brew.BrewState;
 import dev.cinderflask.brew.Brewing;
+import dev.cinderflask.brew.Cracking;
+import dev.cinderflask.brew.Dregs;
 import dev.cinderflask.brew.IngredientTable;
 import dev.cinderflask.brew.BrewEffects;
 import dev.cinderflask.brew.BrewNbt;
@@ -36,6 +38,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
@@ -61,19 +64,27 @@ public class CinderflaskItem extends Item {
     /** How much of this vessel body ingredients may fill. The upgrade path is more of this. */
     private final float ceiling;
 
+    /** Reach the vessel lends on its own. Only the Aetherglass has any. */
+    private final float innateQuintessence;
+
     /**
      * Set to {@code Screen::hasShiftDown} by the client entrypoint. Stays false on a dedicated
      * server, which has no client classes on the classpath.
      */
     public static BooleanSupplier detailModifierHeld = () -> false;
 
-    public CinderflaskItem(Settings settings, float ceiling) {
+    public CinderflaskItem(Settings settings, float ceiling, float innateQuintessence) {
         super(settings);
         this.ceiling = ceiling;
+        this.innateQuintessence = innateQuintessence;
     }
 
     public float ceiling() {
         return ceiling;
+    }
+
+    public float innateQuintessence() {
+        return innateQuintessence;
     }
 
     // -------------------------------------------------------------------------------------------
@@ -192,8 +203,17 @@ public class CinderflaskItem extends Item {
      */
     @Override
     public void inventoryTick(ItemStack stack, World world, Entity holder, int slot, boolean selected) {
-        if (!world.isClient) {
-            BrewNbt.stampIfNeeded(stack, world);
+        if (world.isClient) {
+            return;
+        }
+
+        BrewNbt.stampIfNeeded(stack, world);
+
+        // A cracked flask does not wait to be drunk from.
+        if (Cracking.isCracked(stack) && holder instanceof LivingEntity carrier
+                && world.getTime() % Cracking.LEAK_INTERVAL == 0
+                && BrewState.of(stack, world).canDrink()) {
+            Cracking.leak(stack, (net.minecraft.server.world.ServerWorld) world, carrier);
         }
     }
 
@@ -214,8 +234,16 @@ public class CinderflaskItem extends Item {
 
         int remaining = doses - 1;
         BrewNbt.setDoses(stack, remaining);
+
         if (remaining <= 0) {
+            // The last dose leaves dregs, which is what carries a little of this brew into the next.
+            ItemStack dregs = Dregs.from(brew);
             BrewNbt.empty(stack);
+
+            if (!dregs.isEmpty() && drinker instanceof PlayerEntity holder
+                    && !holder.getInventory().insertStack(dregs)) {
+                holder.dropItem(dregs, false);
+            }
         }
 
         if (drinker instanceof PlayerEntity player) {
@@ -306,7 +334,17 @@ public class CinderflaskItem extends Item {
     }
 
     @Override
+    public Text getName(ItemStack stack) {
+        MutableText earned = dev.cinderflask.brew.VesselName.of(stack);
+        return earned == null ? super.getName(stack) : earned;
+    }
+
+    @Override
     public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
+        if (Cracking.isCracked(stack)) {
+            tooltip.add(Text.translatable("cinderflask.tooltip.cracked").formatted(Formatting.RED));
+        }
+
         Temper temper = BrewNbt.temper(stack);
         tooltip.add(Text.translatable(temper == Temper.UNTEMPERED
                 ? "cinderflask.tooltip.untempered"

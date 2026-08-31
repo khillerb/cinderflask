@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "cinderflask:item/bound_cinderflask",
+    "layer1": "cinderflask:item/cinderflask_liquid_3",
+    "layer2": "cinderflask:item/cinderflask_mote"
+  }
+}

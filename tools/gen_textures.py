@@ -152,6 +152,74 @@ def liquid(level: int) -> list[str]:
     return ["".join(row) for row in grid]
 
 
+# Each tier swaps the metal it is bound with, keeping the silhouette. Read left to right in a
+# hotbar these go gold, iron, blackened iron, amethyst.
+TIER_PALETTES = {
+    "cinderflask": {},
+    "bound_cinderflask": {"G": (104, 104, 110, 255), "g": (162, 162, 170, 255),
+                          "h": (214, 214, 222, 255)},
+    "witch_iron_cinderflask": {"G": (44, 42, 48, 255), "g": (86, 82, 92, 255),
+                               "h": (140, 134, 150, 255),
+                               "S": (26, 24, 30, 255), "s": (70, 64, 80, 255)},
+    "aetherglass_cinderflask": {"G": (92, 58, 128, 255), "g": (152, 104, 196, 255),
+                                "h": (214, 178, 240, 255),
+                                "L": (58, 46, 78, 255), "l": (86, 72, 112, 255),
+                                "w": (150, 132, 186, 255)},
+}
+
+
+DREGS = [
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    ".....KKKKKK.....",
+    "....KmnmmnmK....",
+    "....KnmmnmmK....",
+    "...KmmnmmnmmK...",
+    "...KmnmmnmmnK...",
+    "...KmmnmmmnmK...",
+    "....KKKKKKKK....",
+    "................",
+    "................",
+    "................",
+    "................",
+]
+
+
+SINTER = [
+    "................",
+    "................",
+    "...KKKKKKKKK....",
+    "..KgghgghgggK...",
+    "..KghggghgghK...",
+    "..KgKKKKKKggK...",
+    "..KgKLllwKgggK..",
+    "..KgKLllwKghgK..",
+    "..KgKLllwKgggK..",
+    "..KgKKKKKKghgK..",
+    "..KghgggghgggK..",
+    "..KggghgggghgK..",
+    "...KKKKKKKKKK...",
+    "................",
+    "................",
+    "................",
+]
+
+
+def recoloured(rows: list[str], swaps: dict) -> Image.Image:
+    """The shell drawn through a tier's own palette."""
+    image = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    pixels = image.load()
+
+    for y, row in enumerate(rows):
+        for x, key in enumerate(row):
+            pixels[x, y] = swaps.get(key, PALETTE[key])
+
+    return image
+
+
 def shell() -> list[str]:
     """The vessel with nothing in it. Layer 0, never tinted."""
     grid = blank()
@@ -383,7 +451,9 @@ def main() -> None:
     os.makedirs(GUI_DIR, exist_ok=True)
     os.makedirs(DOCS_DIR, exist_ok=True)
 
-    states = {"cinderflask": draw(shell()), "cinderflask_mote": mote_frames()}
+    states = {"cinderflask_mote": mote_frames()}
+    for tier, swaps in TIER_PALETTES.items():
+        states[tier] = recoloured(shell(), swaps)
     for level in range(1, 5):
         states["cinderflask_liquid_" + str(level)] = draw(liquid(level))
 
@@ -393,6 +463,8 @@ def main() -> None:
     written = {os.path.join(ITEM_DIR, name + ".png"): art for name, art in states.items()}
     written[os.path.join(ITEM_DIR, "cinderflask_mote.png")] = mote_frames()
     written[os.path.join(ITEM_DIR, "sump.png")] = sump()
+    written[os.path.join(ITEM_DIR, "dregs.png")] = draw(DREGS)
+    written[os.path.join(ITEM_DIR, "sinter.png")] = draw(SINTER)
     written[os.path.join(GUI_DIR, "cinderflask.png")] = gui()
     written[os.path.join(ASSET_DIR, "icon.png")] = icon()
     written[os.path.join(DOCS_DIR, "preview.png")] = preview(states)
