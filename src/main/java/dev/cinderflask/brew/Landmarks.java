@@ -15,10 +15,26 @@ import java.util.List;
  * <p>Brews are emergent — any point in the space is drinkable — but a space with nothing named in it
  * is a space nobody can aim at. These are landmarks: worth reaching, worth documenting, and the
  * reference points everything between them is described against.
+ *
+ * <p>They are not a list somebody chose. The wheel has four positions, and each position admits three
+ * readings: the humour on its own, the humour leaning into the next one round, and the humour carried
+ * out to somebody else. Four times three is why there are twelve and not eleven or fifteen, and it is
+ * why the four reaching brews are the four support roles — reach is the axis that decides whether an
+ * effect happens to you or to the people around you.
  */
 public final class Landmarks {
     /** How close a brew has to sit before it takes a landmark's name. */
     public static final float SIMILARITY = 0.94f;
+
+    /** A humour on its own. */
+    private static final float PURE = 8;
+
+    /** A humour leaning into the next one round the wheel. */
+    private static final float LEAN = 6;
+
+    /** A humour carried outward: the same body, with reach behind it. */
+    private static final float CARRIED = 8;
+    private static final float REACH = 5;
 
     public record Landmark(Identifier id, Humours target, String role) {
         public String translationKey() {
@@ -27,25 +43,49 @@ public final class Landmarks {
     }
 
     private static final List<Landmark> ALL = List.of(
-            landmark("emberflask", 7, 1, 1, 0, 0, "alchemist"),
-            landmark("deadmans_draught", 8, 0, 2, 0, 0, "berserker"),
-            landmark("quickstep_draught", 6, 0, 2, 2, 0, "skirmisher"),
-            landmark("ironroot_tonic", 1, 7, 1, 0, 0, "bulwark"),
-            landmark("bramblewine", 3, 6, 0, 1, 0, "retaliator"),
-            landmark("deepdelve", 2, 5, 2, 1, 1, "miner"),
-            landmark("riposte_cordial", 2, 4, 1, 3, 0, "duelist"),
-            landmark("honeyed_restorative", 0, 1, 8, 0, 2, "healer"),
-            landmark("sap_sworn_mead", 3, 0, 6, 1, 0, "reaver"),
-            landmark("kelpwine", 0, 2, 5, 3, 1, "diver"),
-            landmark("nightcap", 1, 1, 1, 7, 0, "assassin"),
-            landmark("gravemead", 0, 4, 0, 6, 2, "necromancer"));
+            // Pure: the humour undiluted, and the four selfish roles.
+            pure(0, "deadmans_draught", "berserker"),
+            pure(1, "ironroot_tonic", "bulwark"),
+            pure(2, "sap_sworn_mead", "reaver"),
+            pure(3, "nightcap", "assassin"),
+
+            // Leaning: half of one humour and half of the next, and the four hybrids.
+            lean(0, "bramblewine", "retaliator"),
+            lean(1, "deepdelve", "miner"),
+            lean(2, "kelpwine", "diver"),
+            lean(3, "quickstep_draught", "skirmisher"),
+
+            // Carried: the same humour with reach behind it, and the four support roles.
+            carried(0, "emberflask", "alchemist"),
+            carried(1, "riposte_cordial", "duelist"),
+            carried(2, "honeyed_restorative", "healer"),
+            carried(3, "gravemead", "necromancer"));
 
     private Landmarks() {
     }
 
-    private static Landmark landmark(String path, float cho, float mel, float san, float phl,
-                                     float qui, String role) {
-        return new Landmark(Cinderflask.id(path), new Humours(cho, mel, san, phl, qui), role);
+    private static Landmark pure(int humour, String path, String role) {
+        return new Landmark(Cinderflask.id(path), on(humour, PURE), role);
+    }
+
+    private static Landmark lean(int humour, String path, String role) {
+        return new Landmark(Cinderflask.id(path),
+                on(humour, LEAN).plus(on(humour + 1, LEAN)), role);
+    }
+
+    private static Landmark carried(int humour, String path, String role) {
+        return new Landmark(Cinderflask.id(path),
+                on(humour, CARRIED).plus(new Humours(0, 0, 0, 0, REACH)), role);
+    }
+
+    /** A vector with {@code amount} at one wheel position and nothing anywhere else. */
+    private static Humours on(int humour, float amount) {
+        return switch (Math.floorMod(humour, Humours.WHEEL)) {
+            case 0 -> Humours.of(amount, 0, 0, 0);
+            case 1 -> Humours.of(0, amount, 0, 0);
+            case 2 -> Humours.of(0, 0, amount, 0);
+            default -> Humours.of(0, 0, 0, amount);
+        };
     }
 
     public static List<Landmark> all() {

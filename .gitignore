@@ -21,3 +21,6 @@ src/main/generated/.cache/
 .classpath
 .project
 bin/
+
+# Python bytecode from tools/
+__pycache__/

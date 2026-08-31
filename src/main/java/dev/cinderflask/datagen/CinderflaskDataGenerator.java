@@ -100,6 +100,27 @@ public class CinderflaskDataGenerator implements DataGeneratorEntrypoint {
             builder.add("cinderflask.landmark.kelpwine", "Kelpwine");
             builder.add("cinderflask.landmark.nightcap", "Nightcap");
             builder.add("cinderflask.landmark.gravemead", "Gravemead");
+            // The draught each landmark produces. Named apart from the brew, because "a Nightcap"
+            // and "the Unseen Hand it leaves you with" are not the same noun.
+            builder.add("effect.cinderflask.deadmans_draught", "Deadman's Vigour");
+            builder.add("effect.cinderflask.ironroot_tonic", "Ironroot");
+            builder.add("effect.cinderflask.sap_sworn_mead", "Sapsworn");
+            builder.add("effect.cinderflask.nightcap", "Unseen Hand");
+            builder.add("effect.cinderflask.bramblewine", "Bramble");
+            builder.add("effect.cinderflask.deepdelve", "Deepdelve");
+            builder.add("effect.cinderflask.kelpwine", "Kelpsworn");
+            builder.add("effect.cinderflask.quickstep_draught", "Quickstep");
+            builder.add("effect.cinderflask.emberflask", "Emberblood");
+            builder.add("effect.cinderflask.riposte_cordial", "Riposte");
+            builder.add("effect.cinderflask.honeyed_restorative", "Honeyed");
+            builder.add("effect.cinderflask.gravemead", "Gravebound");
+
+            // The four rebounds: one to a humour, each the crash from what that humour lent you.
+            builder.add("effect.cinderflask.ashfall", "Ashfall");
+            builder.add("effect.cinderflask.brittle", "Brittle");
+            builder.add("effect.cinderflask.bloodless", "Bloodless");
+            builder.add("effect.cinderflask.plain_sight", "Plain Sight");
+
             builder.add("cinderflask.role.alchemist", "Alchemist");
             builder.add("cinderflask.role.berserker", "Berserker");
             builder.add("cinderflask.role.skirmisher", "Skirmisher");
@@ -139,6 +160,7 @@ public class CinderflaskDataGenerator implements DataGeneratorEntrypoint {
             builder.add("cinderflask.strength.overwhelming", "overwhelmingly");
             builder.add("cinderflask.readout.part", "%s %s");
             builder.add("cinderflask.readout.rough", "%s in the mouth.");
+            builder.add("cinderflask.readout.draughts", "Gives %s");
 
             builder.add("cinderflask.body.thin", "Thin");
             builder.add("cinderflask.body.even", "Even");

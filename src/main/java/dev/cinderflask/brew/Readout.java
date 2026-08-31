@@ -1,9 +1,12 @@
 package dev.cinderflask.brew;
 
+import dev.cinderflask.effect.DraughtEffect;
+import dev.cinderflask.effect.Draughts;
 import dev.cinderflask.player.Palate;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -63,7 +66,33 @@ public final class Readout {
         lines.add(Text.translatable("cinderflask.tooltip.strength",
                 brew.amplifier() + 1, fmt(brew.durationTicks() / 20f)).formatted(Formatting.DARK_GRAY));
 
+        MutableText draughts = draughts(now);
+        if (draughts != null) {
+            lines.add(draughts.formatted(Formatting.DARK_AQUA));
+        }
+
         return lines;
+    }
+
+    /**
+     * What the brew will actually do, once you can taste well enough to say. Read off the same
+     * proximity the effects themselves use, so a tooltip cannot promise something a sip will not give.
+     */
+    @Nullable
+    private static MutableText draughts(Humours now) {
+        MutableText joined = null;
+
+        for (BrewEffects.Share share : BrewEffects.shares(now)) {
+            DraughtEffect draught = Draughts.of(share.landmark());
+            if (draught == null) {
+                continue;
+            }
+
+            MutableText part = draught.getName().copy();
+            joined = joined == null ? part : joined.append(", ").append(part);
+        }
+
+        return joined == null ? null : Text.translatable("cinderflask.readout.draughts", joined);
     }
 
     /** What it smells like, when you have no idea what you are smelling. */

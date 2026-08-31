@@ -17,8 +17,11 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
 
 /**
- * Sends the two numbers that change what a brew does to joining clients, so a server that has
- * retuned the clock does not leave players reading wrong ages.
+ * Sends the numbers that change what a brew does to joining clients, so a server that has retuned
+ * the clock or the draughts does not leave players reading wrong ages or wrong strengths.
+ *
+ * <p>{@link #write} and {@link #read} sit beside each other on purpose: they are the two halves of
+ * one wire format, and a knob added to one and forgotten in the other would desynchronise silently.
  */
 public final class ConfigSync {
     public static final Identifier CHANNEL = Cinderflask.id("config");
@@ -65,6 +68,66 @@ public final class ConfigSync {
         return buf;
     }
 
+    public static void write(PacketByteBuf buf, CinderflaskConfig config) {
+        buf.writeVarInt(config.sipCooldownTicks);
+        buf.writeVarInt(config.ticksPerPhase);
+        buf.writeVarInt(config.maxDraughtsPerDose);
+        buf.writeBoolean(config.draughtsAffectPvp);
+
+        CinderflaskConfig.Tuning tuning = config.draughts;
+        buf.writeFloat(tuning.potency);
+        buf.writeFloat(tuning.comedownSeverity);
+        buf.writeFloat(tuning.berserkFromMissingHealth);
+        buf.writeFloat(tuning.berserkExposure);
+        buf.writeFloat(tuning.ironrootFlatReduction);
+        buf.writeFloat(tuning.sapswornLifestealShare);
+        buf.writeFloat(tuning.brambleReflectShare);
+        buf.writeFloat(tuning.unseenHandBonus);
+        buf.writeFloat(tuning.riposteAnswerBonus);
+        buf.writeFloat(tuning.quickstepSprintReduction);
+        buf.writeFloat(tuning.kelpwineWaterReduction);
+        buf.writeFloat(tuning.graveboundUndeadReduction);
+        buf.writeFloat(tuning.honeyedAllyHeal);
+        buf.writeFloat(tuning.graveboundKillHeal);
+        buf.writeFloat(tuning.ashfallSoftening);
+        buf.writeFloat(tuning.brittleExposure);
+        buf.writeFloat(tuning.bloodlessDrain);
+        buf.writeFloat(tuning.plainSightExposure);
+        buf.writeVarInt(tuning.emberbloodBurnSeconds);
+    }
+
+    /** The other half of {@link #write}. Read in exactly the order it was written. */
+    public static CinderflaskConfig read(PacketByteBuf buf) {
+        CinderflaskConfig config = new CinderflaskConfig();
+        config.sipCooldownTicks = buf.readVarInt();
+        config.ticksPerPhase = buf.readVarInt();
+        config.maxDraughtsPerDose = buf.readVarInt();
+        config.draughtsAffectPvp = buf.readBoolean();
+
+        CinderflaskConfig.Tuning tuning = config.draughts;
+        tuning.potency = buf.readFloat();
+        tuning.comedownSeverity = buf.readFloat();
+        tuning.berserkFromMissingHealth = buf.readFloat();
+        tuning.berserkExposure = buf.readFloat();
+        tuning.ironrootFlatReduction = buf.readFloat();
+        tuning.sapswornLifestealShare = buf.readFloat();
+        tuning.brambleReflectShare = buf.readFloat();
+        tuning.unseenHandBonus = buf.readFloat();
+        tuning.riposteAnswerBonus = buf.readFloat();
+        tuning.quickstepSprintReduction = buf.readFloat();
+        tuning.kelpwineWaterReduction = buf.readFloat();
+        tuning.graveboundUndeadReduction = buf.readFloat();
+        tuning.honeyedAllyHeal = buf.readFloat();
+        tuning.graveboundKillHeal = buf.readFloat();
+        tuning.ashfallSoftening = buf.readFloat();
+        tuning.brittleExposure = buf.readFloat();
+        tuning.bloodlessDrain = buf.readFloat();
+        tuning.plainSightExposure = buf.readFloat();
+        tuning.emberbloodBurnSeconds = buf.readVarInt();
+
+        return config;
+    }
+
     private static void writeEntry(PacketByteBuf buf, IngredientTable.Entry entry) {
         buf.writeFloat(entry.humours().choleric());
         buf.writeFloat(entry.humours().melancholic());
@@ -82,10 +145,8 @@ public final class ConfigSync {
                 return;
             }
 
-            CinderflaskConfig config = CinderflaskConfig.get();
             PacketByteBuf buf = PacketByteBufs.create();
-            buf.writeVarInt(config.sipCooldownTicks);
-            buf.writeVarInt(config.ticksPerPhase);
+            write(buf, CinderflaskConfig.get());
             sender.sendPacket(CHANNEL, buf);
 
             if (ServerPlayNetworking.canSend(handler, TABLE_CHANNEL)) {

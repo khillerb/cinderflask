@@ -19,6 +19,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSET_DIR = os.path.join(ROOT, "src", "main", "resources", "assets", "cinderflask")
 ITEM_DIR = os.path.join(ASSET_DIR, "textures", "item")
 GUI_DIR = os.path.join(ASSET_DIR, "textures", "gui")
+EFFECT_DIR = os.path.join(ASSET_DIR, "textures", "mob_effect")
 DOCS_DIR = os.path.join(ROOT, "docs")
 
 # Near-black bodies, molten amber cores, gold rim-light, matching Prominence II's own items.
@@ -414,6 +415,343 @@ def tint(sprite: Image.Image, colour: int) -> Image.Image:
     return Image.merge("RGBA", (*channels, alpha))
 
 
+# ---------------------------------------------------------------------------------------------
+# Effect icons
+# ---------------------------------------------------------------------------------------------
+
+# The same four humour colours the game blends at render time, plus the pale aether. Kept here so
+# an icon can never disagree with the liquid that produces it.
+HUMOUR_RGB = [0xD9822B, 0x4A2C6B, 0xA31E28, 0x8FA88C]
+AETHER_RGB = 0xE8E0C0
+
+# Landmark, wheel position, and how it is built: on its own, leaning into the next humour, or
+# carried outward on reach. Mirrors Landmarks.java, which generates the same twelve the same way.
+LANDMARKS = [
+    ("deadmans_draught", 0, "pure"),
+    ("ironroot_tonic", 1, "pure"),
+    ("sap_sworn_mead", 2, "pure"),
+    ("nightcap", 3, "pure"),
+    ("bramblewine", 0, "lean"),
+    ("deepdelve", 1, "lean"),
+    ("kelpwine", 2, "lean"),
+    ("quickstep_draught", 3, "lean"),
+    ("emberflask", 0, "carried"),
+    ("riposte_cordial", 1, "carried"),
+    ("honeyed_restorative", 2, "carried"),
+    ("gravemead", 3, "carried"),
+]
+
+# One glyph per role. Ten by ten, centred on an eighteen-pixel tile.
+#   -  outline      +  body      #  highlight
+GLYPHS = {
+    # Berserker: a blade driven downwards.
+    "deadmans_draught": [
+        "...-##-...",
+        "...-##-...",
+        "-########-",
+        "-#-####-#-",
+        "...#++#...",
+        "...#++#...",
+        "...#++#...",
+        "....##....",
+        "....##....",
+        ".....-....",
+    ],
+    # Bulwark: a shield.
+    "ironroot_tonic": [
+        "-########-",
+        "-#++++++#-",
+        "-#++##++#-",
+        "-#++##++#-",
+        "-#++++++#-",
+        ".-#++++#-.",
+        "..-#++#-..",
+        "...-##-...",
+        "....--....",
+        "..........",
+    ],
+    # Reaver: a drop, and it is going the wrong way.
+    "sap_sworn_mead": [
+        "....--....",
+        "....##....",
+        "...-##-...",
+        "...####...",
+        "..-####-..",
+        "..######..",
+        ".-##++##-.",
+        ".-##++##-.",
+        "..-####-..",
+        "...----...",
+    ],
+    # Assassin: a dagger, held low.
+    "nightcap": [
+        "........--",
+        ".......-#-",
+        "......-#+-",
+        ".....-#+-.",
+        "....-#+-..",
+        "..--#+-...",
+        ".-####-...",
+        "-#+-#-....",
+        "-+-..-....",
+        "--........",
+    ],
+    # Retaliator: a hedge that does not want to be touched.
+    "bramblewine": [
+        "..#....#..",
+        ".-#-..-#-.",
+        "-##-..-##-",
+        "-##-##-##-",
+        "-##+##+##-",
+        "-#++++++#-",
+        "-#++++++#-",
+        ".-######-.",
+        "..-####-..",
+        "...----...",
+    ],
+    # Miner: everything that falls, stopping at the floor.
+    "deepdelve": [
+        "....##....",
+        "....##....",
+        "....##....",
+        "-########-",
+        ".-######-.",
+        "..-####-..",
+        "...-##-...",
+        "..........",
+        "##########",
+        "-########-",
+    ],
+    # Diver: water, closing over.
+    "kelpwine": [
+        "..........",
+        "-##-..-##-",
+        "#++####++#",
+        "-..-##-..-",
+        "..........",
+        "-##-..-##-",
+        "#++####++#",
+        "-..-##-..-",
+        "..........",
+        "..........",
+    ],
+    # Skirmisher: two chevrons, going somewhere.
+    "quickstep_draught": [
+        "..........",
+        "-#-...-#-.",
+        "-##-...##-",
+        ".-##-..-##",
+        "..-##-..-#",
+        "..-##-..-#",
+        ".-##-..-##",
+        "-##-...##-",
+        "-#-...-#-.",
+        "..........",
+    ],
+    # Alchemist: a flame.
+    "emberflask": [
+        ".....-....",
+        "....-#-...",
+        "...-##-...",
+        "..-###-...",
+        "..-#+#-...",
+        ".-##+##-..",
+        "-##+++##-.",
+        "-#+++++#-.",
+        "-##+-+##-.",
+        ".-#-.-#-..",
+    ],
+    # Duelist: two blades, crossed.
+    "riposte_cordial": [
+        "-#-....-#-",
+        "-##-..-##-",
+        ".-##--##-.",
+        "..-####-..",
+        "...-##-...",
+        "...-##-...",
+        "..-####-..",
+        ".-##--##-.",
+        "-##-..-##-",
+        "-#-....-#-",
+    ],
+    # Healer: a cross, and it does not stop at the edge.
+    "honeyed_restorative": [
+        "...-##-...",
+        "...-##-...",
+        "...-##-...",
+        "-###++###-",
+        "-#++++++#-",
+        "-###++###-",
+        "...-##-...",
+        "...-##-...",
+        "...-##-...",
+        "..........",
+    ],
+    # Necromancer: what is left.
+    "gravemead": [
+        "..------..",
+        ".-######-.",
+        "-##++++##-",
+        "-#-####-#-",
+        "-#-####-#-",
+        "-##++++##-",
+        ".-##--##-.",
+        "..-#--#-..",
+        "..-#--#-..",
+        "...----...",
+    ],
+}
+
+
+def landmark_colour(humour: int, kind: str) -> tuple[int, int, int]:
+    """Humours.colour() for a landmark, worked out the way the game works it out."""
+    weights = [0.0, 0.0, 0.0, 0.0]
+    aether = 0.0
+
+    if kind == "pure":
+        weights[humour] = 8.0
+    elif kind == "lean":
+        weights[humour] = 6.0
+        weights[(humour + 1) % 4] = 6.0
+    else:
+        weights[humour] = 8.0
+        aether = 5.0
+
+    total = sum(weights) + aether
+    channels = []
+    for shift in (16, 8, 0):
+        value = sum(((HUMOUR_RGB[i] >> shift) & 0xFF) * w / total for i, w in enumerate(weights))
+        value += ((AETHER_RGB >> shift) & 0xFF) * aether / total
+        channels.append(round(value))
+
+    return tuple(channels)
+
+
+def shade(colour, towards, amount: float):
+    return tuple(round(c + (t - c) * amount) for c, t in zip(colour, towards))
+
+
+def effect_icon(name: str, humour: int, kind: str) -> Image.Image:
+    """An eighteen-pixel tile: a dark plate, and the role drawn on it in the brew's own colour."""
+    return plated(landmark_colour(humour, kind), GLYPHS[name])
+
+
+def plated(colour, glyph) -> Image.Image:
+    """A dark rounded plate with a glyph on it, in three steps of one colour."""
+    black = (0, 0, 0)
+    white = (255, 255, 255)
+
+    ramp = {
+        "-": shade(colour, black, 0.55) + (255,),
+        "+": colour + (255,),
+        "#": shade(colour, white, 0.45) + (255,),
+    }
+
+    plate = shade(colour, black, 0.86) + (255,)
+    rim = shade(colour, black, 0.66) + (255,)
+
+    image = Image.new("RGBA", (18, 18), (0, 0, 0, 0))
+    drawing = ImageDraw.Draw(image)
+
+    # A rounded plate, so twelve icons read as one set rather than twelve loose symbols.
+    drawing.rectangle((1, 1, 16, 16), fill=plate)
+    drawing.rectangle((1, 1, 16, 16), outline=rim)
+    for x, y in ((1, 1), (16, 1), (1, 16), (16, 16)):
+        image.putpixel((x, y), (0, 0, 0, 0))
+
+    for row, line in enumerate(glyph):
+        for column, cell in enumerate(line):
+            if cell in ramp:
+                image.putpixel((4 + column, 4 + row), ramp[cell])
+
+    return image
+
+
+def effect_icons() -> dict:
+    return {name: effect_icon(name, humour, kind) for name, humour, kind in LANDMARKS}
+
+
+# The four rebounds. Each mirrors the draught it inverts: a snapped blade against Deadman's whole
+# one, a cracked shield against Ironroot's, a drained drop against Sapsworn's full one, and an open
+# eye against the assassin's knife.
+REBOUNDS = [("ashfall", 0), ("brittle", 1), ("bloodless", 2), ("plain_sight", 3)]
+
+REBOUND_GLYPHS = {
+    # Choleric spent: the blade snapped.
+    "ashfall": [
+        "...-##-...",
+        "...-##-...",
+        "-########-",
+        "-#-####-#-",
+        "...#++#...",
+        "....--....",
+        "..........",
+        "...-##-...",
+        "....##....",
+        ".....-....",
+    ],
+    # Melancholic spent: the wall came apart.
+    "brittle": [
+        "-########-",
+        "-#++-+++#-",
+        "-#++-+++#-",
+        "-#+-++++#-",
+        "-#++-+++#-",
+        ".-#+-++#-.",
+        "..-#-+#-..",
+        "...-##-...",
+        "....--....",
+        "..........",
+    ],
+    # Sanguine spent: the drop, emptied.
+    "bloodless": [
+        "....--....",
+        "....##....",
+        "...-##-...",
+        "...#--#...",
+        "..-#--#-..",
+        "..#----#..",
+        ".-#----#-.",
+        ".-#----#-.",
+        "..-####-..",
+        "...----...",
+    ],
+    # Phlegmatic spent: somebody is looking straight at you.
+    "plain_sight": [
+        "..........",
+        "..-####-..",
+        ".-######-.",
+        "-##+--+##-",
+        "##+----+##",
+        "##+----+##",
+        "-##+--+##-",
+        ".-######-.",
+        "..-####-..",
+        "..........",
+    ],
+}
+
+# Humours.soured(): dragged half-way towards the murk, so a rebound looks like the brew that caused
+# it, gone bad. Same constant as ReboundEffect.SOURED.
+MURK_RGB = 0x2B2118
+SOURED = 0.5
+
+
+def rebound_colour(humour: int) -> tuple:
+    base = HUMOUR_RGB[humour]
+    murk = MURK_RGB
+    return tuple(
+        round((((base >> shift) & 0xFF) * (1 - SOURED)) + (((murk >> shift) & 0xFF) * SOURED))
+        for shift in (16, 8, 0))
+
+
+def rebound_icons() -> dict:
+    icons = {}
+    for name, humour in REBOUNDS:
+        icons[name] = plated(rebound_colour(humour), REBOUND_GLYPHS[name])
+    return icons
+
+
 def preview(states: dict[str, Image.Image]) -> Image.Image:
     """The README image: the same four fill levels under each of the four humours."""
     scale = 64
@@ -449,6 +787,7 @@ def preview(states: dict[str, Image.Image]) -> Image.Image:
 def main() -> None:
     os.makedirs(ITEM_DIR, exist_ok=True)
     os.makedirs(GUI_DIR, exist_ok=True)
+    os.makedirs(EFFECT_DIR, exist_ok=True)
     os.makedirs(DOCS_DIR, exist_ok=True)
 
     states = {"cinderflask_mote": mote_frames()}
@@ -468,6 +807,12 @@ def main() -> None:
     written[os.path.join(GUI_DIR, "cinderflask.png")] = gui()
     written[os.path.join(ASSET_DIR, "icon.png")] = icon()
     written[os.path.join(DOCS_DIR, "preview.png")] = preview(states)
+
+    for name, art in effect_icons().items():
+        written[os.path.join(EFFECT_DIR, name + ".png")] = art
+
+    for name, art in rebound_icons().items():
+        written[os.path.join(EFFECT_DIR, name + ".png")] = art
 
     for path, image in written.items():
         image.save(path, optimize=True)

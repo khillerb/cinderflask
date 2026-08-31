@@ -1,9 +1,10 @@
 package dev.cinderflask.test;
 
 import dev.cinderflask.Cinderflask;
+import dev.cinderflask.config.CinderflaskConfig;
+import dev.cinderflask.net.ConfigSync;
 import dev.cinderflask.brew.Brew;
 import dev.cinderflask.brew.BrewNbt;
-import dev.cinderflask.brew.BrewEffects;
 import dev.cinderflask.brew.Brewing;
 import dev.cinderflask.brew.Humours;
 import dev.cinderflask.brew.IngredientTable;
@@ -11,8 +12,9 @@ import dev.cinderflask.brew.Temper;
 import dev.cinderflask.brew.Tempering;
 import dev.cinderflask.brew.Vessel;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.passive.PigEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.block.Blocks;
@@ -23,7 +25,11 @@ import net.minecraft.test.GameTestException;
 import net.minecraft.test.TestContext;
 import net.minecraft.util.math.BlockPos;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.List;
+
 
 /** Covers the parts of the brew that need a world: the clock, the intake, and spending a dose. */
 public class CinderflaskGameTest implements FabricGameTest {
@@ -282,46 +288,85 @@ public class CinderflaskGameTest implements FabricGameTest {
     }
 
     @GameTest(templateName = EMPTY_STRUCTURE)
-    public void aLopsidedBrewLeavesAComedownAndABalancedOneDoesNot(TestContext context) {
+    public void aSipReachesTheDrinker(TestContext context) {
         ServerWorld world = context.getWorld();
 
-        ItemStack lopsided = flask();
-        BrewNbt.seal(lopsided, Brew.fresh(Humours.of(8, 0, 0, 0), 4), world, 4);
+        ItemStack flask = flask();
+        BrewNbt.seal(flask, Brew.fresh(Humours.of(8, 0, 0, 0), 4), world, 4);
 
-        ItemStack rounded = flask();
-        BrewNbt.seal(rounded, Brew.fresh(Humours.of(2, 2, 2, 2), 4), world, 4);
+        PigEntity drinker = context.spawnMob(EntityType.PIG, new BlockPos(1, 2, 1));
+        flask.finishUsing(world, drinker);
 
-        PigEntity a = context.spawnMob(EntityType.PIG, new BlockPos(1, 2, 1));
-        PigEntity b = context.spawnMob(EntityType.PIG, new BlockPos(3, 2, 1));
-
-        lopsided.finishUsing(world, a);
-        rounded.finishUsing(world, b);
-
-        // Asserted on what the brew produces rather than on what the drinker kept: entities are
-        // allowed to refuse effects (undead turn down regeneration), and that is not this rule.
-        Brew sharp = BrewNbt.read(lopsided, world);
-        Brew even = BrewNbt.read(rounded, world);
-
-        if (sharp == null || even == null) {
-            throw new GameTestException("Both flasks should still hold a brew.");
-        }
-
-        List<StatusEffectInstance> sharpEffects = BrewEffects.of(sharp);
-        if (sharpEffects.size() < 2) {
-            throw new GameTestException("A single-humour brew should carry its opposite as a comedown, got "
-                    + sharpEffects);
-        }
-
-        if (!BrewEffects.of(even).isEmpty() && BrewEffects.of(even).size() != 1) {
-            throw new GameTestException("An even brew has no opposite, so it should drink clean, got "
-                    + BrewEffects.of(even));
-        }
-
-        // And the dose really did reach the drinkers.
-        if (a.getStatusEffects().isEmpty() || b.getStatusEffects().isEmpty()) {
+        // Which effects a brew produces is DraughtTest's business. All this asks is that the intake,
+        // the effect list and a real drinker are still joined up to one another.
+        if (drinker.getStatusEffects().isEmpty()) {
             throw new GameTestException("A sip applied nothing at all.");
         }
 
         context.complete();
+    }
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void theConfigSurvivesTheRoundTripToAClient(TestContext context) {
+        CinderflaskConfig sent = new CinderflaskConfig();
+        sent.sipCooldownTicks = 37;
+        sent.ticksPerPhase = 4321;
+        sent.maxDraughtsPerDose = 2;
+        sent.draughtsAffectPvp = false;
+
+        // A distinct value in every tuning field, so a knob the packet forgot to write comes back as
+        // its default and fails below, rather than matching by coincidence.
+        List<Field> knobs = knobs();
+        try {
+            float seed = 0.11f;
+            for (Field knob : knobs) {
+                if (knob.getType() == float.class) {
+                    knob.setFloat(sent.draughts, seed += 0.07f);
+                } else if (knob.getType() == int.class) {
+                    knob.setInt(sent.draughts, 9);
+                }
+            }
+        } catch (IllegalAccessException e) {
+            throw new GameTestException("Could not seed the tuning block: " + e);
+        }
+
+        PacketByteBuf buf = PacketByteBufs.create();
+        ConfigSync.write(buf, sent);
+        CinderflaskConfig got = ConfigSync.read(buf);
+
+        if (buf.readableBytes() != 0) {
+            throw new GameTestException("The reader left " + buf.readableBytes()
+                    + " bytes on the wire, so the two halves disagree.");
+        }
+
+        if (got.sipCooldownTicks != sent.sipCooldownTicks || got.ticksPerPhase != sent.ticksPerPhase
+                || got.maxDraughtsPerDose != sent.maxDraughtsPerDose
+                || got.draughtsAffectPvp != sent.draughtsAffectPvp) {
+            throw new GameTestException("The top-level config did not survive the round trip.");
+        }
+
+        try {
+            for (Field knob : knobs) {
+                if (!knob.get(sent.draughts).equals(knob.get(got.draughts))) {
+                    throw new GameTestException("draughts." + knob.getName()
+                            + " did not survive the round trip: sent " + knob.get(sent.draughts)
+                            + ", got " + knob.get(got.draughts));
+                }
+            }
+        } catch (IllegalAccessException e) {
+            throw new GameTestException("Could not read the tuning block back: " + e);
+        }
+
+        context.complete();
+    }
+
+    /** Every tunable field, so adding one to the config and not to the packet fails this test. */
+    private static List<Field> knobs() {
+        List<Field> fields = new ArrayList<>();
+        for (Field field : CinderflaskConfig.Tuning.class.getDeclaredFields()) {
+            if (!field.isSynthetic() && !Modifier.isStatic(field.getModifiers())) {
+                fields.add(field);
+            }
+        }
+        return fields;
     }
 }

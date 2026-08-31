@@ -2,6 +2,8 @@ package dev.cinderflask.client.compat.emi;
 
 import dev.cinderflask.brew.Humours;
 import dev.cinderflask.brew.Landmarks;
+import dev.cinderflask.effect.DraughtEffect;
+import dev.cinderflask.effect.Draughts;
 import dev.emi.emi.api.recipe.BasicEmiRecipe;
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
@@ -15,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A known coordinate, and one way to reach it.
+ * A known coordinate, what it gives you, and one way to reach it.
  *
  * <p>The route is solved from whatever the brewing table currently holds rather than written down, so
  * a datapack that retunes an ingredient retunes this page with it. It is one route, and rarely the
@@ -27,7 +29,7 @@ public class LandmarkEmiRecipe extends BasicEmiRecipe {
     private final Landmarks.Landmark landmark;
 
     public LandmarkEmiRecipe(Landmarks.Landmark landmark) {
-        super(CinderflaskEmiPlugin.LANDMARKS, landmark.id(), 132, 50);
+        super(CinderflaskEmiPlugin.LANDMARKS, landmark.id(), 132, 58);
         this.landmark = landmark;
 
         List<EmiIngredient> route = new ArrayList<>();
@@ -43,15 +45,21 @@ public class LandmarkEmiRecipe extends BasicEmiRecipe {
     public void addWidgets(WidgetHolder widgets) {
         widgets.addText(Text.translatable(landmark.translationKey()).formatted(Formatting.GOLD),
                 0, 0, 0xFFFFFFFF, false);
-        widgets.addText(Text.translatable("cinderflask.role." + landmark.role())
-                        .formatted(Formatting.DARK_GRAY),
-                0, 10, 0xFFAAAAAA, false);
 
-        for (int i = 0; i < inputs.size(); i++) {
-            widgets.addSlot(inputs.get(i), i * 18, 22);
+        DraughtEffect draught = Draughts.of(landmark);
+        if (draught != null) {
+            widgets.addText(draught.getName().copy().formatted(Formatting.AQUA),
+                    0, 11, 0xFFAAAAAA, false);
         }
 
-        widgets.addText(coordinate(), 0, 42, 0xFFAAAAAA, false);
+        for (int i = 0; i < inputs.size(); i++) {
+            widgets.addSlot(inputs.get(i), i * 18, 24);
+        }
+
+        widgets.addText(Text.translatable("cinderflask.role." + landmark.role())
+                        .formatted(Formatting.DARK_GRAY),
+                0, 46, 0xFFAAAAAA, false);
+        widgets.addText(coordinate(), 60, 46, 0xFFAAAAAA, false);
     }
 
     private Text coordinate() {

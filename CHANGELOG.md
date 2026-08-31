@@ -4,14 +4,46 @@
 
 The mod is being rebuilt as a witch-brewing mod. Fuel is gone.
 
+**The model**
+
 - A brew is five essences: four humours on a wheel that rotates as it ages, plus a quintessence that
   is reach rather than character. Amplifier, duration, doses, colour, balance and volatility are all
   derived from the vector rather than stored.
-- The flask holds a sealed brew and gives one dose per sip. Sneak to open the intake.
+- Ageing is interpolated from the sealed vector, never applied step by step, so a brew keeps its
+  shape however old it gets instead of blurring towards grey.
 - Ageing is worked out from the seal time, so a flask ages in a chest without anything ticking.
-- The comedown is whatever sits across the wheel from what you drank, scaled by imbalance.
-- Removed: the fuel canister mechanic, the furnace mixin, sparking, and the EMI integration. EMI
-  returns once there is something worth showing.
+
+**Brewing**
+
+- The flask holds a sealed brew and gives one dose per sip. Sneak to open the intake.
+- A base opens a brew; a cork seals it. What ingredients are worth is a datapack table.
+- Tempering against a block changes how fast the brew turns.
+- Four vessels. Upgrading re-houses the flask, so mote, seasoning, temper and earned name all carry
+  across. Only the Aetherglass lends reach on its own.
+- A cracked flask vents its volatile humours first, so it drifts colder and slower as it empties.
+  Pack it in sand and fire it to mend it, vessel and all.
+- Dregs carry a brew's character and part of its age into the next one; a solera top-up blends both.
+
+**What a brew does**
+
+- Twelve landmarks, generated from the wheel rather than chosen: four humours on their own, four
+  leaning into the next humour round, and four carried outward on reach — which is why the four
+  reaching brews are the four support roles.
+- Twelve draughts, one to a landmark, doing things vanilla effects cannot: flat damage reduction,
+  lifesteal, reflected damage, backstab bonuses, damage that scales with your missing health,
+  staggering an attacker at range, healing that spills to everyone near you.
+- What you get is whichever landmarks the brew is near, in proportion to how near. Hit one squarely
+  and you get almost all of one draught; sit between two and you get both; brew something level and
+  you get a spread of weak ones and no crash at all.
+- The crash is a rebound: four effects of the mod's own, each taking back exactly what its humour
+  lent you.
+- Combat numbers are configurable, and the server sends the whole config to joining clients.
+- EMI pages for the brewing table, tempering, and the twelve known brews, with routes solved from
+  the live table so a datapack that retunes an ingredient retunes the page with it.
+
+**Removed**
+
+- The fuel canister mechanic, the furnace mixin, and sparking.
 
 ## 1.0.0 - superseded
 

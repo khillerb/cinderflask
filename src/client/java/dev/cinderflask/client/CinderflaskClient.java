@@ -55,9 +55,8 @@ public final class CinderflaskClient implements ClientModInitializer {
                 Cinderflask.CINDERFLASK);
 
         ClientPlayNetworking.registerGlobalReceiver(ConfigSync.CHANNEL, (client, handler, buf, sender) -> {
-            int sipCooldownTicks = buf.readVarInt();
-            int ticksPerPhase = buf.readVarInt();
-            client.execute(() -> CinderflaskConfig.applyServerValues(sipCooldownTicks, ticksPerPhase));
+            CinderflaskConfig fromServer = ConfigSync.read(buf);
+            client.execute(() -> CinderflaskConfig.applyServerValues(fromServer));
         });
 
         // Datapacks are server-side, so the table arrives over the wire already resolved. Without
