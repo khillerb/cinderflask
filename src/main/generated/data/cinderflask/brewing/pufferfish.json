@@ -1,9 +1,9 @@
 {
+  "corruption": 0.15,
   "humours": {
-    "choleric": 3.0,
     "phlegmatic": 2.0
   },
   "ingredient": {
-    "item": "minecraft:sugar"
+    "item": "minecraft:pufferfish"
   }
 }

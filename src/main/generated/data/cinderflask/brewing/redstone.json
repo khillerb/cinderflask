@@ -1,0 +1,8 @@
+{
+  "humours": {
+    "melancholic": 3.0
+  },
+  "ingredient": {
+    "item": "minecraft:redstone"
+  }
+}

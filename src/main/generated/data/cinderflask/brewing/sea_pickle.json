@@ -1,0 +1,9 @@
+{
+  "humours": {
+    "phlegmatic": 1.0,
+    "sanguine": 2.0
+  },
+  "ingredient": {
+    "item": "minecraft:sea_pickle"
+  }
+}

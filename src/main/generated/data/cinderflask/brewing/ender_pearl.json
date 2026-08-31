@@ -1,0 +1,9 @@
+{
+  "humours": {
+    "quintessence": 3.0,
+    "sanguine": 1.0
+  },
+  "ingredient": {
+    "item": "minecraft:ender_pearl"
+  }
+}

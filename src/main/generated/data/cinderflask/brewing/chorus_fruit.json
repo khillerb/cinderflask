@@ -1,0 +1,9 @@
+{
+  "humours": {
+    "phlegmatic": 1.0,
+    "quintessence": 3.0
+  },
+  "ingredient": {
+    "item": "minecraft:chorus_fruit"
+  }
+}

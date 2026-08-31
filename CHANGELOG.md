@@ -41,6 +41,27 @@ The mod is being rebuilt as a witch-brewing mod. Fuel is gone.
 - EMI pages for the brewing table, tempering, and the twelve known brews, with routes solved from
   the live table so a datapack that retunes an ingredient retunes the page with it.
 
+**In the recipe viewer**
+
+- Every landmark now has a signature ingredient that sits nearer to it than to anything else, so the
+  obvious thing to put in Kelpwine is kelp. Added kelp, cactus, glow lichen, fire charge, prismarine
+  shard, glistering melon slice, wither skeleton skull, sea pickle, chorus fruit, ender pearl,
+  poisonous potato and pufferfish; redstone and glowstone dust carry the same meanings vanilla
+  brewing already gives them. Sugar moved to where Speed suggests it should be.
+- Suggested routes aim to fill a flask rather than merely to point the right way, and score against
+  corruption, so a page telling you how to make something no longer tells you to spoil it.
+- The bench operations — corking, the three upgrades, solera and sintering — describe themselves now.
+  They are special recipes, which declare no ingredients and no output, so every one of them was
+  invisible to a recipe viewer. A new one cannot go missing again: a test fails if any special
+  recipe of this mod cannot be drawn.
+- Pages for the parts of a flask's life that are not recipes at all: dregs, sump, cracking, ageing.
+- Ingredient pages no longer cut themselves off after four lines, which had been hiding corruption on
+  exactly the ingredients where it mattered. They say which known brew an ingredient aims at.
+- Landmark pages describe a brew in the same words its own tooltip uses, rather than four bare
+  numbers, and group a repeated ingredient into one stack.
+- Fixed: every synthetic EMI page was registered under an id EMI expected to find in the recipe
+  manager, so it logged an error for each one on every world join.
+
 **Removed**
 
 - The fuel canister mechanic, the furnace mixin, and sparking.

@@ -9,6 +9,7 @@ import dev.cinderflask.item.CinderflaskItem;
 import net.minecraft.inventory.RecipeInputInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.recipe.Ingredient;
 import net.minecraft.recipe.RecipeSerializer;
 import net.minecraft.recipe.SpecialCraftingRecipe;
 import net.minecraft.recipe.book.CraftingRecipeCategory;
@@ -16,6 +17,7 @@ import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.world.World;
 
+import java.util.List;
 import java.util.function.Predicate;
 
 /**
@@ -30,16 +32,16 @@ public final class VesselRecipes {
     }
 
     /** Upgrades a vessel to a wider one, keeping everything it has become. */
-    public static class Upgrade extends SpecialCraftingRecipe {
+    public static class Upgrade extends SpecialCraftingRecipe implements VesselOperation {
         private final CinderflaskItem from;
         private final CinderflaskItem to;
-        private final Predicate<ItemStack> firstCost;
-        private final Predicate<ItemStack> secondCost;
+        private final Ingredient firstCost;
+        private final Ingredient secondCost;
         private final RecipeSerializer<?> serializer;
 
         public Upgrade(Identifier id, CraftingRecipeCategory category, CinderflaskItem from,
-                       CinderflaskItem to, Predicate<ItemStack> firstCost,
-                       Predicate<ItemStack> secondCost, RecipeSerializer<?> serializer) {
+                       CinderflaskItem to, Ingredient firstCost,
+                       Ingredient secondCost, RecipeSerializer<?> serializer) {
             super(id, category);
             this.from = from;
             this.to = to;
@@ -51,9 +53,24 @@ public final class VesselRecipes {
         @Override
         public boolean matches(RecipeInputInventory inventory, World world) {
             return findFlask(inventory, from) != null
-                    && count(inventory, firstCost) == 1
-                    && count(inventory, secondCost) == 1
+                    && count(inventory, firstCost::test) == 1
+                    && count(inventory, secondCost::test) == 1
                     && total(inventory) == 3;
+        }
+
+        @Override
+        public List<Ingredient> inputs() {
+            return List.of(Ingredient.ofStacks(new ItemStack(from)), firstCost, secondCost);
+        }
+
+        @Override
+        public ItemStack preview() {
+            return new ItemStack(to);
+        }
+
+        @Override
+        public String descriptionKey() {
+            return "cinderflask.vessel.upgrade";
         }
 
         @Override
@@ -87,9 +104,24 @@ public final class VesselRecipes {
      * old flask comes back up to strength without being reset to new. It is the only way to hold a
      * deep phase at full body, because decay outruns anything brewed fresh.
      */
-    public static class Solera extends SpecialCraftingRecipe {
+    public static class Solera extends SpecialCraftingRecipe implements VesselOperation {
         public Solera(Identifier id, CraftingRecipeCategory category) {
             super(id, category);
+        }
+
+        @Override
+        public List<Ingredient> inputs() {
+            return List.of(anyVessel(), anyVessel());
+        }
+
+        @Override
+        public ItemStack preview() {
+            return new ItemStack(Cinderflask.CINDERFLASK);
+        }
+
+        @Override
+        public String descriptionKey() {
+            return "cinderflask.vessel.solera";
         }
 
         @Override
@@ -145,9 +177,24 @@ public final class VesselRecipes {
     }
 
     /** Packs a cracked flask in sand, ready for the fire that mends it. */
-    public static class Sinter extends SpecialCraftingRecipe {
+    public static class Sinter extends SpecialCraftingRecipe implements VesselOperation {
         public Sinter(Identifier id, CraftingRecipeCategory category) {
             super(id, category);
+        }
+
+        @Override
+        public List<Ingredient> inputs() {
+            return List.of(anyVessel(), Ingredient.ofItems(Items.SAND));
+        }
+
+        @Override
+        public ItemStack preview() {
+            return new ItemStack(Cinderflask.SINTER);
+        }
+
+        @Override
+        public String descriptionKey() {
+            return "cinderflask.vessel.sinter";
         }
 
         @Override
@@ -225,11 +272,12 @@ public final class VesselRecipes {
         return found;
     }
 
-    public static Predicate<ItemStack> is(net.minecraft.item.Item item) {
-        return stack -> stack.isOf(item);
-    }
-
-    public static Predicate<ItemStack> tagged(net.minecraft.registry.tag.TagKey<net.minecraft.item.Item> tag) {
-        return stack -> stack.isIn(tag);
+    /** Every vessel, so a page about flasks in general shows all four rather than picking one. */
+    static Ingredient anyVessel() {
+        ItemStack[] vessels = new ItemStack[Cinderflask.vessels().length];
+        for (int i = 0; i < vessels.length; i++) {
+            vessels[i] = new ItemStack(Cinderflask.vessels()[i]);
+        }
+        return Ingredient.ofStacks(vessels);
     }
 }

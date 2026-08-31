@@ -52,6 +52,7 @@ public class CinderflaskDataGenerator implements DataGeneratorEntrypoint {
             ComplexRecipeJsonBuilder.create(Cinderflask.BIND_RECIPE).offerTo(exporter, "cinderflask:bind");
             ComplexRecipeJsonBuilder.create(Cinderflask.WITCH_IRON_RECIPE).offerTo(exporter, "cinderflask:witch_iron");
             ComplexRecipeJsonBuilder.create(Cinderflask.AETHERGLASS_RECIPE).offerTo(exporter, "cinderflask:aetherglass");
+
         }
     }
 
@@ -80,6 +81,7 @@ public class CinderflaskDataGenerator implements DataGeneratorEntrypoint {
             builder.add("emi.category.cinderflask.brewing", "Brewing");
             builder.add("emi.category.cinderflask.tempering", "Tempering");
             builder.add("emi.category.cinderflask.landmarks", "Known Brews");
+            builder.add("emi.category.cinderflask.vessel", "The Vessel");
 
             builder.add("cinderflask.emi.base", "Opens a brew");
             builder.add("cinderflask.emi.writes", "Writes %s %s");
@@ -87,6 +89,19 @@ public class CinderflaskDataGenerator implements DataGeneratorEntrypoint {
             builder.add("cinderflask.emi.body", "Body +%s");
             builder.add("cinderflask.emi.corruption", "Corruption +%s");
             builder.add("cinderflask.emi.clock", "Ages at %sx");
+            builder.add("cinderflask.emi.aims", "Aims at %s");
+            builder.add("cinderflask.emi.gives", "%s  ·  %s");
+
+            builder.add("cinderflask.vessel.cork", "Seals a working brew. This is what starts its clock.");
+            builder.add("cinderflask.vessel.upgrade", "Re-houses the brew in a wider vessel.");
+            builder.add("cinderflask.vessel.solera", "Pours a working brew into a sealed one. Strength and age both blend by dose.");
+            builder.add("cinderflask.vessel.sinter", "Packs a cracked flask in sand. Fire it in a furnace to mend it.");
+            builder.add("cinderflask.vessel.carries", "The mote, the seasoning, the temper and the name all survive.");
+
+            builder.add("cinderflask.info.dregs", "What settles in a flask you drank dry. Open the next brew on it and that brew starts part-aged, remembering some of what came before.");
+            builder.add("cinderflask.info.sump", "What a brew becomes when it is left far too long, or crammed past what the vessel can hold. It is not a drink. It is the cheap way into the corrupt half of the wheel.");
+            builder.add("cinderflask.info.cracked", "A heavy hit while you are carrying something volatile cracks the flask. A crack breathes off the hot humours first, so a cracked flask drifts colder and slower as it empties — long weak doses of something quite unlike what you brewed. Some people keep one on purpose.");
+            builder.add("cinderflask.info.ageing", "A sealed brew turns one step round the wheel every half day, and it does it in a chest as readily as in your hand. Choleric settles into melancholic, melancholic mellows into sanguine, sanguine sours into phlegmatic, and phlegmatic comes back round to choleric. Four steps is a full turn, and a full turn costs the brew some of its body.");
 
             builder.add("cinderflask.landmark.emberflask", "Emberflask");
             builder.add("cinderflask.landmark.deadmans_draught", "Deadman's Draught");

@@ -1,0 +1,9 @@
+{
+  "humours": {
+    "quintessence": 1.0,
+    "sanguine": 3.0
+  },
+  "ingredient": {
+    "item": "minecraft:glistering_melon_slice"
+  }
+}

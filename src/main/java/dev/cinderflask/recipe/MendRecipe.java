@@ -4,10 +4,9 @@ import dev.cinderflask.Cinderflask;
 import dev.cinderflask.item.SinterItem;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.recipe.AbstractCookingRecipe;
+import net.minecraft.recipe.SmeltingRecipe;
 import net.minecraft.recipe.Ingredient;
 import net.minecraft.recipe.RecipeSerializer;
-import net.minecraft.recipe.RecipeType;
 import net.minecraft.recipe.book.CookingRecipeCategory;
 import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.util.Identifier;
@@ -19,10 +18,13 @@ import net.minecraft.util.Identifier;
  * mote, seasoning and name. This one reads the flask out of what went in, so the thing you get back
  * is the thing you put in.
  */
-public class MendRecipe extends AbstractCookingRecipe {
+public class MendRecipe extends SmeltingRecipe {
     public MendRecipe(Identifier id, String group, CookingRecipeCategory category,
                       Ingredient input, ItemStack output, float experience, int cookingTime) {
-        super(RecipeType.SMELTING, id, group, category, input, output, experience, cookingTime);
+        // Extends SmeltingRecipe rather than AbstractCookingRecipe directly: RecipeType.SMELTING is
+        // declared as RecipeType<SmeltingRecipe>, and anything that trusts that declaration enough to
+        // cast would have found a recipe that is not one.
+        super(id, group, category, input, output, experience, cookingTime);
     }
 
     @Override

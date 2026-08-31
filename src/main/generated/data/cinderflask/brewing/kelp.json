@@ -1,0 +1,9 @@
+{
+  "humours": {
+    "phlegmatic": 2.0,
+    "sanguine": 3.0
+  },
+  "ingredient": {
+    "item": "minecraft:kelp"
+  }
+}

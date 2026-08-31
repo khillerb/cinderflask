@@ -48,7 +48,7 @@ public final class Readout {
         }
 
         if (level < 3) {
-            lines.add(named(now).formatted(Formatting.GRAY));
+            lines.add(inWords(now).formatted(Formatting.GRAY));
             lines.add(Text.translatable("cinderflask.readout.rough",
                     Text.translatable(bodyWord(brew))).formatted(Formatting.DARK_GRAY));
             return lines;
@@ -105,8 +105,13 @@ public final class Readout {
         };
     }
 
-    /** The humours by name, with a sense of how much, but no numbers. */
-    private static MutableText named(Humours now) {
+    /**
+     * The humours by name, with a sense of how much, but no numbers.
+     *
+     * <p>Public because the EMI pages describe vectors too, and a viewer that worded a brew
+     * differently from its own tooltip would be worse than one that said nothing.
+     */
+    public static MutableText inWords(Humours now) {
         float total = now.magnitude();
         List<Text> parts = new ArrayList<>(Humours.WHEEL);
 

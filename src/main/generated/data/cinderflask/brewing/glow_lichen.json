@@ -1,0 +1,9 @@
+{
+  "humours": {
+    "melancholic": 2.0,
+    "sanguine": 3.0
+  },
+  "ingredient": {
+    "item": "minecraft:glow_lichen"
+  }
+}

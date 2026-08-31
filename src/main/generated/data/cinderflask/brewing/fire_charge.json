@@ -1,9 +1,9 @@
 {
   "humours": {
     "choleric": 3.0,
-    "phlegmatic": 2.0
+    "quintessence": 1.0
   },
   "ingredient": {
-    "item": "minecraft:sugar"
+    "item": "minecraft:fire_charge"
   }
 }

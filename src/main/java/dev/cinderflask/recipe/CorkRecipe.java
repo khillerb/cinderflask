@@ -6,6 +6,7 @@ import dev.cinderflask.brew.Brewing;
 import dev.cinderflask.item.CinderflaskItem;
 import net.minecraft.inventory.RecipeInputInventory;
 import net.minecraft.item.ItemStack;
+import net.minecraft.recipe.Ingredient;
 import net.minecraft.recipe.RecipeSerializer;
 import net.minecraft.recipe.SpecialCraftingRecipe;
 import net.minecraft.recipe.book.CraftingRecipeCategory;
@@ -13,6 +14,8 @@ import net.minecraft.registry.DynamicRegistryManager;
 import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.util.Identifier;
 import net.minecraft.world.World;
+
+import java.util.List;
 
 /**
  * Stops up a working brew, which is what starts its clock.
@@ -24,7 +27,7 @@ import net.minecraft.world.World;
  * {@link CinderflaskItem#inventoryTick} stamps the clock the first time the flask is somewhere that
  * has one.
  */
-public class CorkRecipe extends SpecialCraftingRecipe {
+public class CorkRecipe extends SpecialCraftingRecipe implements VesselOperation {
     public CorkRecipe(Identifier id, CraftingRecipeCategory category) {
         super(id, category);
     }
@@ -45,6 +48,21 @@ public class CorkRecipe extends SpecialCraftingRecipe {
         ItemStack corked = flask.copy();
         Brewing.cork(corked);
         return corked;
+    }
+
+    @Override
+    public List<Ingredient> inputs() {
+        return List.of(VesselRecipes.anyVessel(), Ingredient.fromTag(ItemTags.PLANKS));
+    }
+
+    @Override
+    public ItemStack preview() {
+        return new ItemStack(Cinderflask.CINDERFLASK);
+    }
+
+    @Override
+    public String descriptionKey() {
+        return "cinderflask.vessel.cork";
     }
 
     @Override

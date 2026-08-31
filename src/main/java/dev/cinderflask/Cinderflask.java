@@ -23,6 +23,7 @@ import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
 import net.minecraft.item.ItemGroups;
 import net.minecraft.item.Items;
 import net.minecraft.recipe.CookingRecipeSerializer;
+import net.minecraft.recipe.Ingredient;
 import net.minecraft.recipe.RecipeSerializer;
 import net.minecraft.recipe.SpecialRecipeSerializer;
 import net.minecraft.registry.Registries;
@@ -75,19 +76,19 @@ public final class Cinderflask implements ModInitializer {
     public static final RecipeSerializer<VesselRecipes.Upgrade> BIND_RECIPE =
             new SpecialRecipeSerializer<>((id, category) -> new VesselRecipes.Upgrade(
                     id, category, CINDERFLASK, BOUND_CINDERFLASK,
-                    VesselRecipes.is(Items.IRON_INGOT), VesselRecipes.is(Items.HONEYCOMB),
+                    Ingredient.ofItems(Items.IRON_INGOT), Ingredient.ofItems(Items.HONEYCOMB),
                     Cinderflask.BIND_RECIPE));
 
     public static final RecipeSerializer<VesselRecipes.Upgrade> WITCH_IRON_RECIPE =
             new SpecialRecipeSerializer<>((id, category) -> new VesselRecipes.Upgrade(
                     id, category, BOUND_CINDERFLASK, WITCH_IRON_CINDERFLASK,
-                    VesselRecipes.is(Items.IRON_BLOCK), VesselRecipes.is(Items.WITHER_ROSE),
+                    Ingredient.ofItems(Items.IRON_BLOCK), Ingredient.ofItems(Items.WITHER_ROSE),
                     Cinderflask.WITCH_IRON_RECIPE));
 
     public static final RecipeSerializer<VesselRecipes.Upgrade> AETHERGLASS_RECIPE =
             new SpecialRecipeSerializer<>((id, category) -> new VesselRecipes.Upgrade(
                     id, category, WITCH_IRON_CINDERFLASK, AETHERGLASS_CINDERFLASK,
-                    VesselRecipes.is(Items.AMETHYST_SHARD), VesselRecipes.is(Items.ECHO_SHARD),
+                    Ingredient.ofItems(Items.AMETHYST_SHARD), Ingredient.ofItems(Items.ECHO_SHARD),
                     Cinderflask.AETHERGLASS_RECIPE));
 
     /** Every vessel, narrowest first. */

@@ -46,6 +46,15 @@ loom {
     }
 
     runs {
+        // EMI only runs its plugins when a world is joined, so a client that stops at the title
+        // screen proves nothing about the pages. This one joins a world called 'emitest' straight
+        // away; create one by that name once and every later run bakes the EMI index for real.
+        clientEmi {
+            client()
+            name = 'Client (EMI world)'
+            programArgs '--quickPlaySingleplayer', 'emitest'
+        }
+
         gametest {
             inherit server
             name = 'Game Test'
@@ -69,6 +78,10 @@ dependencies {
 
     // Client-side and compile-only: EMI never requests the entrypoint when it is not installed.
     modClientCompileOnly "dev.emi:emi-fabric:${project.emi_version}:api"
+
+    // The real jar in the dev client only, so the EMI pages can actually be looked at. It is not a
+    // dependency of the mod and never reaches the release jar.
+    modClientRuntimeOnly "dev.emi:emi-fabric:${project.emi_version}"
 
     // The humour maths is pure Java and gets plain unit tests; everything with a world uses gametests.
     testImplementation platform('org.junit:junit-bom:5.10.2')

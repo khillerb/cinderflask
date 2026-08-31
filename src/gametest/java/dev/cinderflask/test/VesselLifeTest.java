@@ -11,10 +11,16 @@ import dev.cinderflask.brew.IngredientTable;
 import dev.cinderflask.brew.Landmarks;
 import dev.cinderflask.brew.Vessel;
 import dev.cinderflask.brew.VesselName;
+import dev.cinderflask.item.CinderflaskItem;
+import dev.cinderflask.recipe.VesselOperation;
 import dev.cinderflask.item.SinterItem;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.minecraft.item.ItemStack;
+import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.Items;
+import net.minecraft.recipe.Recipe;
+import net.minecraft.recipe.RecipeType;
+import net.minecraft.recipe.SpecialCraftingRecipe;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.test.GameTest;
 import net.minecraft.test.GameTestException;
@@ -118,9 +124,18 @@ public class VesselLifeTest implements FabricGameTest {
         int mote = Vessel.moteColour(flask);
         int brews = Vessel.brewCount(flask);
 
-        ItemStack mended = SinterItem.unpack(SinterItem.pack(flask));
+        // Through the recipe manager rather than through SinterItem, because the helper working is
+        // not the same thing as a furnace being able to reach it. It was not, for a while.
+        SimpleInventory furnace = new SimpleInventory(SinterItem.pack(flask));
+        var recipe = world.getRecipeManager().getFirstMatch(RecipeType.SMELTING, furnace, world);
 
-        if (mended.isEmpty()) {
+        if (recipe.isEmpty()) {
+            throw new GameTestException("No smelting recipe matches a sintered flask.");
+        }
+
+        ItemStack mended = recipe.get().craft(furnace, world.getRegistryManager());
+
+        if (mended.isEmpty() || !(mended.getItem() instanceof CinderflaskItem)) {
             throw new GameTestException("Nothing came back out of the sinter.");
         }
 
@@ -284,23 +299,95 @@ public class VesselLifeTest implements FabricGameTest {
 
     @GameTest(templateName = EMPTY_STRUCTURE)
     public void everyLandmarkHasAReachableRoute(TestContext context) {
+        float ceiling = Cinderflask.CINDERFLASK.ceiling();
+
         for (Landmarks.Landmark landmark : Landmarks.all()) {
-            var route = Landmarks.route(landmark, 5);
+            var route = Landmarks.route(landmark, 6);
 
             if (route.isEmpty()) {
                 throw new GameTestException("No route found to " + landmark.id());
             }
 
-            // The solver should end up somewhere the landmark would actually claim.
             Humours reached = Humours.EMPTY;
             for (var item : route) {
-                reached = reached.plus(IngredientTable.lookup(new ItemStack(item)).humours());
+                IngredientTable.Entry step = IngredientTable.lookup(new ItemStack(item));
+                reached = reached.plus(step.humours());
+
+                // A page telling you how to make something should not casually tell you to spoil it.
+                if (step.corruption() > 0) {
+                    throw new GameTestException("The route to " + landmark.id() + " recommends "
+                            + item + ", which corrupts the brew.");
+                }
             }
 
+            // The solver should end up somewhere the landmark would actually claim.
             if (reached.similarity(landmark.target()) < 0.8f) {
                 throw new GameTestException("The route to " + landmark.id() + " only reaches "
                         + reached.similarity(landmark.target()));
             }
+
+            // And it should be a drink, not a direction. Half a flask is the least that is worth it.
+            if (reached.magnitude() < ceiling / 2) {
+                throw new GameTestException("The route to " + landmark.id() + " only fills "
+                        + reached.magnitude() + " of a " + ceiling + " flask.");
+            }
+        }
+
+        context.complete();
+    }
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void everyLandmarkHasAnIngredientThatObviouslyMeansIt(TestContext context) {
+        for (Landmarks.Landmark landmark : Landmarks.all()) {
+            var route = Landmarks.route(landmark, 6);
+            IngredientTable.Entry opener = IngredientTable.lookup(new ItemStack(route.get(0)));
+
+            // Wanting Kelpwine should send you looking for kelp. If the shortest way in does not
+            // itself point at the landmark, the table has no obvious thing to reach for.
+            Landmarks.Landmark means = Landmarks.nearest(opener.humours());
+
+            if (means == null || !means.id().equals(landmark.id())) {
+                throw new GameTestException("The route to " + landmark.id() + " opens with "
+                        + route.get(0) + ", which points at "
+                        + (means == null ? "nothing in particular" : means.id()));
+            }
+        }
+
+        context.complete();
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // What a recipe viewer can see
+    // -------------------------------------------------------------------------------------------
+
+    @GameTest(templateName = EMPTY_STRUCTURE)
+    public void everyBenchOperationDescribesItself(TestContext context) {
+        int described = 0;
+
+        for (Recipe<?> recipe : context.getWorld().getRecipeManager().values()) {
+            if (!recipe.getId().getNamespace().equals(Cinderflask.MOD_ID)
+                    || !(recipe instanceof SpecialCraftingRecipe)) {
+                continue;
+            }
+
+            // A special recipe declares no ingredients and no output, so a viewer shows nothing at
+            // all unless the recipe says what it wants. This is the guard against adding a bench
+            // operation and quietly shipping it invisible.
+            if (!(recipe instanceof VesselOperation operation)) {
+                throw new GameTestException(recipe.getId()
+                        + " is a special recipe that no recipe viewer could draw.");
+            }
+
+            if (operation.inputs().isEmpty() || operation.preview().isEmpty()) {
+                throw new GameTestException(recipe.getId() + " describes itself as nothing.");
+            }
+
+            described++;
+        }
+
+        // Cork, solera, sinter and the three upgrades.
+        if (described < 6) {
+            throw new GameTestException("Expected six bench operations, found " + described);
         }
 
         context.complete();

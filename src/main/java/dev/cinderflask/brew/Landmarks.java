@@ -26,6 +26,12 @@ public final class Landmarks {
     /** How close a brew has to sit before it takes a landmark's name. */
     public static final float SIMILARITY = 0.94f;
 
+    /** How far a suggested route may wander from the landmark it is aiming at. */
+    private static final float ROUTE_FLOOR = 0.90f;
+
+    /** What a unit of corruption costs an ingredient when a route is choosing between two. */
+    private static final float FILTH_PENALTY = 0.15f;
+
     /** A humour on its own. */
     private static final float PURE = 8;
 
@@ -111,18 +117,24 @@ public final class Landmarks {
     /**
      * One way to reach a landmark, worked out from whatever the brewing table currently holds.
      *
-     * <p>Greedy: repeatedly take whichever ingredient closes the most distance, until adding anything
-     * would make it worse. Not the only route and not always the cheapest, but it is derived from the
-     * live table, so a datapack that retunes an ingredient retunes the suggestion with it.
+     * <p>Greedy, and it keeps going until the brew would actually fill a plain flask rather than
+     * stopping the moment the direction is right — a route that says "one kelp" is pointing the right
+     * way but is not a drink. Filth is scored against, so a page suggesting how to make something
+     * does not casually recommend spoiling it.
+     *
+     * <p>Derived from the live table, so a datapack that retunes an ingredient retunes the route with
+     * it. Not the only way, and rarely the cheapest.
      */
     public static List<Item> route(Landmark landmark, int limit) {
         List<Item> route = new ArrayList<>();
         Humours running = Humours.EMPTY;
+        float ceiling = Cinderflask.CINDERFLASK.ceiling();
 
-        for (int step = 0; step < limit; step++) {
+        while (route.size() < limit && running.magnitude() < ceiling) {
             Item best = null;
             Humours bestResult = null;
-            float bestSimilarity = running.isEmpty() ? -1 : running.similarity(landmark.target());
+            float bestScore = -1;
+            float bestSimilarity = 0;
 
             for (Item candidate : Registries.ITEM) {
                 IngredientTable.Entry entry = IngredientTable.lookup(new ItemStack(candidate));
@@ -132,15 +144,18 @@ public final class Landmarks {
 
                 Humours next = running.plus(entry.humours());
                 float similarity = next.similarity(landmark.target());
+                float score = similarity - FILTH_PENALTY * entry.corruption();
 
-                if (similarity > bestSimilarity) {
+                if (score > bestScore) {
+                    bestScore = score;
                     bestSimilarity = similarity;
                     best = candidate;
                     bestResult = next;
                 }
             }
 
-            if (best == null) {
+            // Better to hand back a short route than to wander away from the landmark to fill up.
+            if (best == null || bestSimilarity < ROUTE_FLOOR) {
                 break;
             }
 

@@ -49,35 +49,56 @@ public class BrewingProvider implements DataProvider {
         written.add(item(writer, Items.NETHER_WART, body(4)));
         written.add(item(writer, Items.PITCHER_PLANT, body(6)));
 
-        // Choleric — hot and quick.
+        // Choleric — hot and quick. Glowstone is vanilla's amplifier reagent, and force is what
+        // choleric is, so it lands here without anything having to be explained.
         written.add(item(writer, Items.BLAZE_POWDER, humour(3, 0, 0, 0)));
         written.add(item(writer, Items.MAGMA_CREAM, humour(2, 0, 1, 0)));
-        written.add(item(writer, Items.SUGAR, humour(1, 0, 1, 0)));
+        written.add(item(writer, Items.GLOWSTONE_DUST, humour(3, 0, 0, 0)));
 
-        // Melancholic — cold and patient.
+        // Melancholic — cold and patient. Redstone is vanilla's duration reagent, for the same reason.
         written.add(item(writer, Items.IRON_NUGGET, humour(0, 2, 0, 0)));
         written.add(item(writer, Items.AZALEA, humour(0, 3, 0, 0)));
         written.add(item(writer, Items.PRISMARINE_CRYSTALS, humour(0, 2, 0, 1)));
+        written.add(item(writer, Items.REDSTONE, humour(0, 3, 0, 0)));
 
         // Sanguine — sweet and vital.
         written.add(item(writer, Items.GLOW_BERRIES, humour(0, 0, 3, 0)));
         written.add(item(writer, Items.SWEET_BERRIES, humour(0, 0, 2, 0)));
+        written.add(item(writer, Items.SEA_PICKLE, humour(0, 0, 2, 1)));
 
         // Phlegmatic — dull and strange.
         written.add(item(writer, Items.FERMENTED_SPIDER_EYE, humour(0, 0, 0, 3)));
         written.add(item(writer, Items.INK_SAC, humour(0, 1, 0, 2)));
         written.add(item(writer, Items.SPORE_BLOSSOM, humour(0, 0, 1, 2)));
 
+        // The signatures. One ingredient per landmark, sitting nearer to it than to anything else,
+        // so the obvious thing to put in Kelpwine is kelp. Deliberately a little off the coordinate
+        // rather than exactly on it: a signature should open the route, not finish it by itself.
+        written.add(item(writer, Items.CACTUS, humour(2, 3, 0, 0)));            // Bramblewine
+        written.add(item(writer, Items.GLOW_LICHEN, humour(0, 2, 3, 0)));       // Deepdelve
+        written.add(item(writer, Items.KELP, humour(0, 0, 3, 2)));              // Kelpwine
+        written.add(item(writer, Items.SUGAR, humour(3, 0, 0, 2)));             // Quickstep Draught
+
+        // The four that reach. Short on quintessence on purpose, so the route still has to buy some.
+        written.add(item(writer, Items.FIRE_CHARGE, reaching(3, 0, 0, 0, 1)));            // Emberflask
+        written.add(item(writer, Items.PRISMARINE_SHARD, reaching(0, 3, 0, 0, 1)));       // Riposte Cordial
+        written.add(item(writer, Items.GLISTERING_MELON_SLICE, reaching(0, 0, 3, 0, 1))); // Honeyed Restorative
+        written.add(item(writer, Items.WITHER_SKELETON_SKULL, reaching(0, 0, 0, 3, 1)));  // Gravemead
+
         // Reach. The shard is what does the echoing.
         written.add(item(writer, Items.AMETHYST_SHARD, aether(1)));
         written.add(item(writer, Items.GHAST_TEAR, aether(2)));
         written.add(item(writer, Items.ECHO_SHARD, aether(5)));
         written.add(item(writer, Items.NETHER_STAR, aether(5)));
+        written.add(item(writer, Items.CHORUS_FRUIT, reaching(0, 0, 0, 1, 3)));
+        written.add(item(writer, Items.ENDER_PEARL, reaching(0, 0, 1, 0, 3)));
 
         // Filth, bought deliberately rather than waited for.
         written.add(item(writer, Items.ROTTEN_FLESH, corrupt(0, 0, 0, 1, 0.15f)));
         written.add(item(writer, Items.WITHER_ROSE, corrupt(0, 0, 0, 2, 0.30f)));
         written.add(item(writer, Items.SOUL_SOIL, corrupt(0, 1, 0, 1, 0.20f)));
+        written.add(item(writer, Items.POISONOUS_POTATO, corrupt(0, 0, 0, 1, 0.20f)));
+        written.add(item(writer, Items.PUFFERFISH, corrupt(0, 0, 0, 2, 0.15f)));
 
         // Vanilla effects, so a brewing stand is the shallow way into the deep system. Described
         // here rather than guessed, because vanilla effect colours are decorative — Strength is a
@@ -137,6 +158,11 @@ public class BrewingProvider implements DataProvider {
 
     private static Values aether(float quintessence) {
         return new Values(0, 0, 0, 0, 0, quintessence, 0, false);
+    }
+
+    /** Humours and reach together, for anything that carries its effect to somebody else. */
+    private static Values reaching(float cho, float mel, float san, float phl, float quintessence) {
+        return new Values(0, cho, mel, san, phl, quintessence, 0, false);
     }
 
     private static Values body(float body) {

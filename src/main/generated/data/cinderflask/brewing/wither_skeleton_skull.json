@@ -1,0 +1,9 @@
+{
+  "humours": {
+    "phlegmatic": 3.0,
+    "quintessence": 1.0
+  },
+  "ingredient": {
+    "item": "minecraft:wither_skeleton_skull"
+  }
+}

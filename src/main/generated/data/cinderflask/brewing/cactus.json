@@ -1,0 +1,9 @@
+{
+  "humours": {
+    "choleric": 2.0,
+    "melancholic": 3.0
+  },
+  "ingredient": {
+    "item": "minecraft:cactus"
+  }
+}
