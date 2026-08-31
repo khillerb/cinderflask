@@ -5,10 +5,18 @@ import dev.cinderflask.brew.BrewEffects;
 import dev.cinderflask.brew.BrewNbt;
 import dev.cinderflask.brew.Humours;
 import dev.cinderflask.brew.Temper;
+import dev.cinderflask.brew.Tempering;
+import dev.cinderflask.brew.Vessel;
 import dev.cinderflask.config.CinderflaskConfig;
 import dev.cinderflask.screen.CinderflaskScreenHandlerFactory;
 import net.minecraft.client.item.TooltipContext;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.item.ItemUsageContext;
+import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.Registries;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.Identifier;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -123,6 +131,59 @@ public class CinderflaskItem extends Item {
         return stack;
     }
 
+    /**
+     * Takes an impression of a living thing. The creature is unharmed; the cost is that a flask holds
+     * one mote for good, so the choice is permanent.
+     */
+    @Override
+    public ActionResult useOnEntity(ItemStack stack, PlayerEntity player, LivingEntity entity, Hand hand) {
+        if (Vessel.hasMote(stack)) {
+            return ActionResult.PASS;
+        }
+
+        World world = player.getWorld();
+        if (world.isClient) {
+            return ActionResult.SUCCESS;
+        }
+
+        if (!Vessel.catchMote(stack, entity)) {
+            return ActionResult.PASS;
+        }
+
+        ((ServerWorld) world).spawnParticles(ParticleTypes.END_ROD,
+                entity.getX(), entity.getBodyY(0.6), entity.getZ(), 12, 0.2, 0.3, 0.2, 0.01);
+        world.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
+                SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME, SoundCategory.PLAYERS, 0.7F, 1.4F);
+
+        return ActionResult.CONSUME;
+    }
+
+    /** Fires the flask against a heat or chill source, which sets its temper for good. */
+    @Override
+    public ActionResult useOnBlock(ItemUsageContext context) {
+        ItemStack stack = context.getStack();
+        World world = context.getWorld();
+
+        Temper temper = Tempering.of(world.getBlockState(context.getBlockPos()));
+        if (temper == null || BrewNbt.temper(stack) != Temper.UNTEMPERED) {
+            return ActionResult.PASS;
+        }
+
+        if (world.isClient) {
+            return ActionResult.SUCCESS;
+        }
+
+        BrewNbt.setTemper(stack, temper);
+
+        ((ServerWorld) world).spawnParticles(ParticleTypes.SOUL_FIRE_FLAME,
+                context.getHitPos().x, context.getHitPos().y, context.getHitPos().z,
+                16, 0.2, 0.2, 0.2, 0.01);
+        world.playSound(null, context.getBlockPos(),
+                SoundEvents.BLOCK_LAVA_EXTINGUISH, SoundCategory.PLAYERS, 0.6F, 1.6F);
+
+        return ActionResult.CONSUME;
+    }
+
     // -------------------------------------------------------------------------------------------
     // Reading the flask
     // -------------------------------------------------------------------------------------------
@@ -144,8 +205,17 @@ public class CinderflaskItem extends Item {
     @Override
     public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
         Temper temper = BrewNbt.temper(stack);
-        if (temper != Temper.UNTEMPERED) {
-            tooltip.add(Text.translatable(temper.translationKey()).formatted(Formatting.DARK_AQUA));
+        tooltip.add(Text.translatable(temper == Temper.UNTEMPERED
+                ? "cinderflask.tooltip.untempered"
+                : temper.translationKey()).formatted(Formatting.DARK_AQUA));
+
+        Identifier origin = Vessel.moteOrigin(stack);
+        if (origin == null) {
+            tooltip.add(Text.translatable("cinderflask.tooltip.no_mote").formatted(Formatting.DARK_GRAY));
+        } else {
+            tooltip.add(Text.translatable("cinderflask.tooltip.mote",
+                    Registries.ENTITY_TYPE.get(origin).getName(),
+                    Vessel.brewCount(stack)).formatted(Formatting.DARK_GRAY));
         }
 
         Brew brew = BrewNbt.read(stack, world);

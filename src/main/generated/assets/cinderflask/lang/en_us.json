@@ -11,11 +11,16 @@
   "cinderflask.temper.rime": "Rime temper",
   "cinderflask.temper.untempered": "Untempered",
   "cinderflask.tooltip.age": "phase %s, corruption %s",
+  "cinderflask.tooltip.body": "Body +%s",
   "cinderflask.tooltip.doses": "%s doses",
   "cinderflask.tooltip.empty": "Empty. Something ought to go in it.",
   "cinderflask.tooltip.humours": "Cho %s  Mel %s  San %s  Phl %s",
+  "cinderflask.tooltip.mote": "A mote of %s  ·  %s brews",
+  "cinderflask.tooltip.no_mote": "No mote. Offer it something living.",
   "cinderflask.tooltip.reach": "Reach %s",
   "cinderflask.tooltip.ruined": "Something has died in here.",
   "cinderflask.tooltip.strength": "Strength %s for %ss",
+  "cinderflask.tooltip.untempered": "Untempered",
+  "cinderflask.tooltip.writes": "Writes %s",
   "item.cinderflask.cinderflask": "Cinderflask"
 }

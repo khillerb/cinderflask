@@ -65,6 +65,12 @@ public class CinderflaskDataGenerator implements DataGeneratorEntrypoint {
 
             builder.add("cinderflask.message.empty", "The flask is empty.");
 
+            builder.add("cinderflask.tooltip.untempered", "Untempered");
+            builder.add("cinderflask.tooltip.no_mote", "No mote. Offer it something living.");
+            builder.add("cinderflask.tooltip.mote", "A mote of %s  ·  %s brews");
+            builder.add("cinderflask.tooltip.body", "Body +%s");
+            builder.add("cinderflask.tooltip.writes", "Writes %s");
+
             builder.add("cinderflask.gui.doses", "%s doses");
             builder.add("cinderflask.gui.strength", "Strength %s  ·  %ss");
             builder.add("cinderflask.gui.nothing", "Nothing in it yet.");

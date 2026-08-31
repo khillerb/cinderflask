@@ -31,10 +31,13 @@ public final class Brewing {
         float corruption = existing == null ? 0 : existing.addedCorruption();
         float phase = existing == null ? 0 : existing.phase();
 
-        if (existing == null) {
-            // Whatever the vessel was fired against leans the brew and lends its own filth.
+        boolean starting = existing == null;
+        if (starting) {
+            // Whatever the vessel was fired against leans the brew and lends its own filth, and so
+            // does everything it has held before — a flask used only for one humour starts pulling
+            // every new brew that way.
             Temper temper = BrewNbt.temper(flask);
-            humours = humours.plus(temper.bias());
+            humours = humours.plus(temper.bias()).plus(Vessel.drift(flask));
             corruption += temper.corruption();
         }
 
@@ -43,6 +46,10 @@ public final class Brewing {
 
         Brew brewed = new Brew(humours, phase, corruption, capacity);
         BrewNbt.seal(flask, brewed, world, brewed.doses());
+
+        if (starting) {
+            Vessel.record(flask, humours);
+        }
 
         return !brewed.isSpoiled();
     }

@@ -174,6 +174,31 @@ def shell() -> list[str]:
     return ["".join(row) for row in grid]
 
 
+# Where the mote drifts, frame by frame: a small orbit inside the body, keeping clear of the steel
+# band on row 9 and the foot on row 14, which both muddle it. It draws over the liquid rather than
+# above it, so a full flask reads as a spirit swimming in the brew.
+MOTE_PATH = [(6, 11), (7, 10), (8, 11), (7, 12)]
+
+
+def mote_frames() -> Image.Image:
+    """A two-pixel spirit with a halo, four frames tall, greyscale so it takes the flask's colour."""
+    sheet = Image.new("RGBA", (16, 16 * len(MOTE_PATH)), (0, 0, 0, 0))
+
+    for frame, (x, y) in enumerate(MOTE_PATH):
+        top = frame * 16
+
+        # Two pixels of core, so it has a direction as it moves rather than pulsing on the spot.
+        sheet.putpixel((x, top + y), (255, 255, 255, 255))
+        if x + 1 < 16:
+            sheet.putpixel((x + 1, top + y), (226, 226, 226, 255))
+
+        for hx, hy in ((x - 1, y), (x + 2, y), (x, y - 1), (x, y + 1), (x + 1, y - 1), (x + 1, y + 1)):
+            if 0 <= hx < 16 and 0 <= hy < 16:
+                sheet.putpixel((hx, top + hy), (200, 200, 200, 150))
+
+    return sheet
+
+
 def draw(rows: list[str]) -> Image.Image:
     image = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
     pixels = image.load()
@@ -271,6 +296,9 @@ def icon() -> Image.Image:
     return image
 
 
+# Spawn-egg colours: an allay, a blaze, a bee and a warden. What the mote is seeded from.
+MOTE_COLOURS = [0x56CCF2, 0xF6B201, 0xEDC343, 0x0F4649]
+
 BREW_COLOURS = {
     "choleric": 0xD9822B,
     "melancholic": 0x4A2C6B,
@@ -312,6 +340,10 @@ def preview(states: dict[str, Image.Image]) -> Image.Image:
             pool = tint(pool, BREW_COLOURS[name])
             image.paste(pool, (x, y), pool)
 
+            spirit = states["cinderflask_mote"].crop((0, 0, 16, 16)).resize((scale, scale), Image.NEAREST)
+            spirit = tint(spirit, MOTE_COLOURS[row % len(MOTE_COLOURS)])
+            image.paste(spirit, (x, y), spirit)
+
         drawing.text((gap + 2, y + scale - 8), name, fill=(196, 196, 208, 255))
 
     return image
@@ -322,11 +354,15 @@ def main() -> None:
     os.makedirs(GUI_DIR, exist_ok=True)
     os.makedirs(DOCS_DIR, exist_ok=True)
 
-    states = {"cinderflask": draw(shell())}
+    states = {"cinderflask": draw(shell()), "cinderflask_mote": mote_frames()}
     for level in range(1, 5):
         states["cinderflask_liquid_" + str(level)] = draw(liquid(level))
 
+    # An empty flask still needs a liquid layer so the mote stays at tint index 2 in every model.
+    states["cinderflask_liquid_0"] = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+
     written = {os.path.join(ITEM_DIR, name + ".png"): art for name, art in states.items()}
+    written[os.path.join(ITEM_DIR, "cinderflask_mote.png")] = mote_frames()
     written[os.path.join(GUI_DIR, "cinderflask.png")] = gui()
     written[os.path.join(ASSET_DIR, "icon.png")] = icon()
     written[os.path.join(DOCS_DIR, "preview.png")] = preview(states)
@@ -334,6 +370,12 @@ def main() -> None:
     for path, image in written.items():
         image.save(path, optimize=True)
         print("wrote", os.path.relpath(path, ROOT))
+
+    # The mote is a sprite sheet, so it needs an animation descriptor beside it.
+    meta = os.path.join(ITEM_DIR, "cinderflask_mote.png.mcmeta")
+    with open(meta, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write('{\n  "animation": {\n    "frametime": 7\n  }\n}\n')
+    print("wrote", os.path.relpath(meta, ROOT))
 
 
 if __name__ == "__main__":
