@@ -1,0 +1,7 @@
+{
+  "effect": "minecraft:conduit_power",
+  "humours": {
+    "quintessence": 2.0,
+    "sanguine": 1.0
+  }
+}

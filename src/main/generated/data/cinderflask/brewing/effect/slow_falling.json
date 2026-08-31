@@ -1,0 +1,7 @@
+{
+  "effect": "minecraft:slow_falling",
+  "humours": {
+    "choleric": 1.0,
+    "phlegmatic": 1.0
+  }
+}

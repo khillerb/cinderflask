@@ -1,0 +1,7 @@
+{
+  "corruption": 0.1,
+  "effect": "minecraft:mining_fatigue",
+  "humours": {
+    "melancholic": 2.0
+  }
+}

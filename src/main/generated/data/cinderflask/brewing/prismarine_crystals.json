@@ -1,0 +1,9 @@
+{
+  "humours": {
+    "melancholic": 2.0,
+    "phlegmatic": 1.0
+  },
+  "ingredient": {
+    "item": "minecraft:prismarine_crystals"
+  }
+}

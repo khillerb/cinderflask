@@ -1,0 +1,8 @@
+{
+  "humours": {
+    "phlegmatic": 3.0
+  },
+  "ingredient": {
+    "item": "minecraft:fermented_spider_eye"
+  }
+}

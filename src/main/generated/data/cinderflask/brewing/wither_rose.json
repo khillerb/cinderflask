@@ -1,0 +1,9 @@
+{
+  "corruption": 0.3,
+  "humours": {
+    "phlegmatic": 2.0
+  },
+  "ingredient": {
+    "item": "minecraft:wither_rose"
+  }
+}

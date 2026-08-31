@@ -1,0 +1,7 @@
+{
+  "corruption": 0.1,
+  "effect": "minecraft:weakness",
+  "humours": {
+    "melancholic": 1.0
+  }
+}

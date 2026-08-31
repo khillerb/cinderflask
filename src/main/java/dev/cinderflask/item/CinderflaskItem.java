@@ -1,13 +1,22 @@
 package dev.cinderflask.item;
 
+import dev.cinderflask.Cinderflask;
 import dev.cinderflask.brew.Brew;
+import dev.cinderflask.brew.BrewState;
+import dev.cinderflask.brew.Brewing;
+import dev.cinderflask.brew.IngredientTable;
 import dev.cinderflask.brew.BrewEffects;
 import dev.cinderflask.brew.BrewNbt;
 import dev.cinderflask.brew.Humours;
 import dev.cinderflask.brew.Temper;
 import dev.cinderflask.brew.Tempering;
 import dev.cinderflask.brew.Vessel;
+import dev.cinderflask.brew.Readout;
 import dev.cinderflask.config.CinderflaskConfig;
+import dev.cinderflask.player.Palate;
+import dev.cinderflask.player.PalateState;
+import dev.cinderflask.player.PalateSync;
+import net.minecraft.server.network.ServerPlayerEntity;
 import dev.cinderflask.screen.CinderflaskScreenHandlerFactory;
 import net.minecraft.client.item.TooltipContext;
 import net.minecraft.entity.LivingEntity;
@@ -17,6 +26,11 @@ import net.minecraft.registry.Registries;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.HitResult;
+import net.minecraft.fluid.Fluids;
+import net.minecraft.item.Items;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -88,16 +102,99 @@ public class CinderflaskItem extends Item {
             return TypedActionResult.success(stack, world.isClient);
         }
 
-        if (BrewNbt.doses(stack) <= 0) {
+        BrewState state = BrewState.of(stack, world);
+
+        // A ruined brew is poured out, or rinsed away at water. Either way the vessel survives with
+        // its mote and its seasoning: those belong to the flask, not to what was in it.
+        if (state == BrewState.RUINED) {
+            return discard(stack, world, player);
+        }
+
+        // An empty flask held at water fills itself. Water is a base like any other, so the entry
+        // comes out of the same datapack table rather than being special-cased here.
+        if (state.acceptsBase() && fillFromWater(stack, world, player)) {
+            return TypedActionResult.success(stack, world.isClient);
+        }
+
+        if (!state.canDrink()) {
             if (!world.isClient) {
-                player.sendMessage(Text.translatable("cinderflask.message.empty")
-                        .formatted(Formatting.GRAY), true);
+                player.sendMessage(Text.translatable(state == BrewState.WORKING
+                        ? "cinderflask.message.uncorked"
+                        : "cinderflask.message.empty").formatted(Formatting.GRAY), true);
             }
             return TypedActionResult.fail(stack);
         }
 
         player.setCurrentHand(hand);
         return TypedActionResult.consume(stack);
+    }
+
+    private boolean fillFromWater(ItemStack stack, World world, PlayerEntity player) {
+        if (!lookingAtWater(world, player)) {
+            return false;
+        }
+
+        IngredientTable.Entry water = IngredientTable.lookup(new ItemStack(Items.WATER_BUCKET));
+        if (water == null || !water.base()) {
+            return false;
+        }
+
+        if (!world.isClient) {
+            Brewing.addBase(stack, water, ceiling);
+            world.playSound(null, player.getX(), player.getY(), player.getZ(),
+                    SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.PLAYERS, 0.8F, 1.0F);
+        }
+
+        return true;
+    }
+
+    /** Pours a ruined brew into bottles, or rinses it away if you are standing at water. */
+    private TypedActionResult<ItemStack> discard(ItemStack stack, World world, PlayerEntity player) {
+        boolean atWater = lookingAtWater(world, player);
+        int doses = BrewNbt.doses(stack);
+
+        if (world.isClient) {
+            return TypedActionResult.success(stack, true);
+        }
+
+        BrewNbt.empty(stack);
+
+        if (atWater) {
+            world.playSound(null, player.getX(), player.getY(), player.getZ(),
+                    SoundEvents.ITEM_BUCKET_EMPTY, SoundCategory.PLAYERS, 0.7F, 1.2F);
+            player.sendMessage(Text.translatable("cinderflask.message.washed")
+                    .formatted(Formatting.GRAY), true);
+            return TypedActionResult.success(stack);
+        }
+
+        ItemStack sump = new ItemStack(Cinderflask.SUMP, Math.max(1, doses));
+        if (!player.getInventory().insertStack(sump)) {
+            player.dropItem(sump, false);
+        }
+
+        world.playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.ITEM_BOTTLE_EMPTY, SoundCategory.PLAYERS, 0.7F, 0.7F);
+        player.sendMessage(Text.translatable("cinderflask.message.poured")
+                .formatted(Formatting.GRAY), true);
+
+        return TypedActionResult.success(stack);
+    }
+
+    private boolean lookingAtWater(World world, PlayerEntity player) {
+        BlockHitResult hit = raycast(world, player, net.minecraft.world.RaycastContext.FluidHandling.SOURCE_ONLY);
+        return hit.getType() == HitResult.Type.BLOCK
+                && world.getFluidState(hit.getBlockPos()).isOf(Fluids.WATER);
+    }
+
+    /**
+     * Corking happens at a crafting bench, which has no world to read a time from, so the clock is
+     * started the first time the flask is seen in one. Once, and never again.
+     */
+    @Override
+    public void inventoryTick(ItemStack stack, World world, Entity holder, int slot, boolean selected) {
+        if (!world.isClient) {
+            BrewNbt.stampIfNeeded(stack, world);
+        }
     }
 
     @Override
@@ -123,6 +220,12 @@ public class CinderflaskItem extends Item {
 
         if (drinker instanceof PlayerEntity player) {
             player.getItemCooldownManager().set(this, CinderflaskConfig.get().sipCooldownTicks);
+        }
+
+        if (drinker instanceof ServerPlayerEntity player) {
+            // Tasting is how the palate grows, credited by each humour's share of the dose.
+            Palate learned = PalateState.get(player.server).record(player, brew.current());
+            PalateSync.send(player, learned);
         }
 
         world.playSound(null, drinker.getX(), drinker.getY(), drinker.getZ(),
@@ -232,23 +335,12 @@ public class CinderflaskItem extends Item {
             return;
         }
 
-        // Phase 7 gates this behind the Palate. Until then the numbers are simply shown on shift.
-        if (detailModifierHeld.getAsBoolean()) {
-            Humours now = brew.current();
-            tooltip.add(Text.translatable("cinderflask.tooltip.humours",
-                    fmt(now.choleric()), fmt(now.melancholic()),
-                    fmt(now.sanguine()), fmt(now.phlegmatic())).formatted(Formatting.GRAY));
-            tooltip.add(Text.translatable("cinderflask.tooltip.reach",
-                    fmt(now.quintessence())).formatted(Formatting.GRAY));
-            tooltip.add(Text.translatable("cinderflask.tooltip.age",
-                    fmt(brew.phase()), fmt(brew.corruption())).formatted(Formatting.DARK_GRAY));
-        } else {
-            tooltip.add(Text.translatable("cinderflask.tooltip.strength",
-                    brew.amplifier() + 1, fmt(brew.durationTicks() / 20f)).formatted(Formatting.GRAY));
-        }
-    }
+        tooltip.addAll(Readout.describe(brew, PalateSync.local()));
 
-    private static String fmt(float value) {
-        return String.format("%.1f", value);
+        if (detailModifierHeld.getAsBoolean()) {
+            tooltip.add(Text.translatable("cinderflask.tooltip.age",
+                    Readout.fmt(brew.phase()), Readout.fmt(brew.corruption()))
+                    .formatted(Formatting.DARK_GRAY));
+        }
     }
 }

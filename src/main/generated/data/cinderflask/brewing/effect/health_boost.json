@@ -1,0 +1,7 @@
+{
+  "effect": "minecraft:health_boost",
+  "humours": {
+    "melancholic": 2.0,
+    "sanguine": 2.0
+  }
+}

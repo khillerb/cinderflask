@@ -1,0 +1,8 @@
+{
+  "humours": {
+    "sanguine": 3.0
+  },
+  "ingredient": {
+    "item": "minecraft:glow_berries"
+  }
+}

@@ -2,83 +2,168 @@ package dev.cinderflask.brew;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import net.minecraft.entity.effect.StatusEffect;
+import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.potion.PotionUtil;
+import net.minecraft.recipe.Ingredient;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
  * What each ingredient writes into a brew.
  *
- * <p>Hardcoded for now against vanilla stand-ins, so the loop is playable before the herbs exist.
- * Phase 3 replaces the contents with datapack JSON loaded through {@code ResourceManagerHelper} and
- * synced to clients; everything else in the mod goes through {@link #lookup} and will not notice.
+ * <p>Filled from {@code data/cinderflask/brewing/*.json} by {@link BrewingRecipes} and pushed to
+ * clients on join. Everything else in the mod goes through {@link #lookup}, which resolves in three
+ * steps: the item index, then the brew's own effect table if the stack is a potion, then
+ * {@link PotionMapping}'s heuristic for effects nobody has described.
  */
 public final class IngredientTable {
     /**
-     * @param humours what it writes into the vector
-     * @param body    how much of the vessel's ceiling it fills — capacity, not essence
+     * @param humours    what it writes into the vector
+     * @param body       how much of the vessel's ceiling it fills — capacity, not essence
+     * @param corruption filth it brings with it
+     * @param base       whether it can open a brew, and only open one
      */
-    public record Entry(Humours humours, float body) {
-        public static Entry humour(float cho, float mel, float san, float phl) {
-            return new Entry(Humours.of(cho, mel, san, phl), 0);
+    public record Entry(Humours humours, float body, float corruption, boolean base) {
+        public static final Entry NOTHING = new Entry(Humours.EMPTY, 0, 0, false);
+
+        public Entry scaled(float factor) {
+            return new Entry(
+                    new Humours(humours.choleric() * factor, humours.melancholic() * factor,
+                            humours.sanguine() * factor, humours.phlegmatic() * factor,
+                            humours.quintessence() * factor),
+                    body * factor, corruption * factor, base);
         }
 
-        public static Entry aether(float quintessence) {
-            return new Entry(new Humours(0, 0, 0, 0, quintessence), 0);
+        public Entry plus(Entry other) {
+            return new Entry(humours.plus(other.humours), body + other.body,
+                    corruption + other.corruption, base || other.base);
         }
 
-        public static Entry body(float body) {
-            return new Entry(Humours.EMPTY, body);
+        public boolean isNothing() {
+            return humours.isEmpty() && body <= 0 && corruption <= 0;
         }
     }
 
-    private static final Map<Item, Entry> ENTRIES = new HashMap<>();
-
-    static {
-        // Body: how much of the vessel you actually fill. More body means more doses and a milder
-        // brew, because the same essence is spread through more of it.
-        ENTRIES.put(Items.HONEYCOMB, Entry.body(2));
-        ENTRIES.put(Items.NETHER_WART, Entry.body(4));
-        ENTRIES.put(Items.PITCHER_PLANT, Entry.body(6));
-
-        // Choleric: hot and quick.
-        ENTRIES.put(Items.BLAZE_POWDER, Entry.humour(3, 0, 0, 0));
-        ENTRIES.put(Items.MAGMA_CREAM, Entry.humour(2, 0, 1, 0));
-        ENTRIES.put(Items.SUGAR, Entry.humour(1, 0, 1, 0));
-
-        // Melancholic: cold and patient.
-        ENTRIES.put(Items.IRON_NUGGET, Entry.humour(0, 2, 0, 0));
-        ENTRIES.put(Items.AZALEA, Entry.humour(0, 3, 0, 0));
-        ENTRIES.put(Items.PRISMARINE_CRYSTALS, Entry.humour(0, 2, 0, 1));
-
-        // Sanguine: sweet and vital.
-        ENTRIES.put(Items.GLOW_BERRIES, Entry.humour(0, 0, 3, 0));
-        ENTRIES.put(Items.HONEY_BOTTLE, Entry.humour(0, 0, 2, 0));
-        ENTRIES.put(Items.SWEET_BERRIES, Entry.humour(0, 0, 2, 0));
-
-        // Phlegmatic: dull and strange.
-        ENTRIES.put(Items.FERMENTED_SPIDER_EYE, Entry.humour(0, 0, 0, 3));
-        ENTRIES.put(Items.INK_SAC, Entry.humour(0, 1, 0, 2));
-        ENTRIES.put(Items.SPORE_BLOSSOM, Entry.humour(0, 0, 1, 2));
-
-        // Reach. The shard is what does the echoing.
-        ENTRIES.put(Items.AMETHYST_SHARD, Entry.aether(1));
-        ENTRIES.put(Items.GHAST_TEAR, Entry.aether(2));
-        ENTRIES.put(Items.ECHO_SHARD, Entry.aether(5));
-        ENTRIES.put(Items.NETHER_STAR, Entry.aether(5));
+    /** A parsed entry before its ingredient has been resolved against the tag state. */
+    public record Parsed(@Nullable Ingredient ingredient, @Nullable StatusEffect effect, Entry entry) {
     }
+
+    private static volatile List<Parsed> parsed = List.of();
+    private static volatile Map<Item, Entry> itemIndex;
+    private static volatile Map<StatusEffect, Entry> effectIndex;
 
     private IngredientTable() {
     }
 
+    /** Replaces the whole table. Called by the datapack loader and by the client on sync. */
+    public static void replace(List<Parsed> entries) {
+        parsed = List.copyOf(entries);
+        itemIndex = null;
+        effectIndex = null;
+    }
+
+    public static List<Parsed> entries() {
+        return parsed;
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // Resolution
+    // -------------------------------------------------------------------------------------------
+
+    private static Map<Item, Entry> items() {
+        Map<Item, Entry> local = itemIndex;
+        if (local != null) {
+            return local;
+        }
+
+        // Built on first use rather than at load, because resolving an Ingredient walks the tag
+        // state and that is not settled while the reload is still running.
+        local = new HashMap<>();
+        for (Parsed entry : parsed) {
+            if (entry.ingredient() == null) {
+                continue;
+            }
+            for (ItemStack stack : entry.ingredient().getMatchingStacks()) {
+                local.putIfAbsent(stack.getItem(), entry.entry());
+            }
+        }
+
+        itemIndex = local;
+        return local;
+    }
+
+    private static Map<StatusEffect, Entry> effects() {
+        Map<StatusEffect, Entry> local = effectIndex;
+        if (local != null) {
+            return local;
+        }
+
+        local = new HashMap<>();
+        for (Parsed entry : parsed) {
+            if (entry.effect() != null) {
+                local.putIfAbsent(entry.effect(), entry.entry());
+            }
+        }
+
+        effectIndex = local;
+        return local;
+    }
+
     @Nullable
     public static Entry lookup(ItemStack stack) {
-        return stack.isEmpty() ? null : ENTRIES.get(stack.getItem());
+        if (stack.isEmpty()) {
+            return null;
+        }
+
+        Entry direct = items().get(stack.getItem());
+        if (direct != null) {
+            return direct;
+        }
+
+        return fromPotion(stack);
+    }
+
+    /**
+     * A potion writes whatever its effects are worth. Strength II writes more than Strength I, and a
+     * potion from another mod still maps itself through {@link PotionMapping}.
+     */
+    @Nullable
+    private static Entry fromPotion(ItemStack stack) {
+        List<StatusEffectInstance> instances = PotionUtil.getPotionEffects(stack);
+        if (instances.isEmpty()) {
+            return null;
+        }
+
+        Entry total = Entry.NOTHING;
+        for (StatusEffectInstance instance : instances) {
+            Entry described = effects().get(instance.getEffectType());
+            Entry contribution = described != null
+                    ? described
+                    : PotionMapping.heuristic(instance.getEffectType());
+
+            total = total.plus(contribution.scaled(instance.getAmplifier() + 1));
+        }
+
+        return total.isNothing() ? null : total;
     }
 
     public static boolean isIngredient(ItemStack stack) {
-        return lookup(stack) != null;
+        Entry entry = lookup(stack);
+        return entry != null && !entry.isNothing();
+    }
+
+    public static boolean isBase(ItemStack stack) {
+        Entry entry = lookup(stack);
+        return entry != null && entry.base();
+    }
+
+    /** Everything currently known, flattened for the sync payload. */
+    public static List<Parsed> forSync() {
+        return new ArrayList<>(parsed);
     }
 }

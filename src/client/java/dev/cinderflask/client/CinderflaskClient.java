@@ -2,9 +2,13 @@ package dev.cinderflask.client;
 
 import dev.cinderflask.Cinderflask;
 import dev.cinderflask.config.CinderflaskConfig;
+import dev.cinderflask.brew.Humours;
+import dev.cinderflask.brew.IngredientTable;
 import dev.cinderflask.brew.Vessel;
 import dev.cinderflask.item.CinderflaskItem;
 import dev.cinderflask.net.ConfigSync;
+import dev.cinderflask.player.Palate;
+import dev.cinderflask.player.PalateSync;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -13,6 +17,12 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreens;
 import net.minecraft.client.item.ModelPredicateProviderRegistry;
+import net.minecraft.item.ItemStack;
+import net.minecraft.recipe.Ingredient;
+import net.minecraft.registry.Registries;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public final class CinderflaskClient implements ClientModInitializer {
     // A generated model gives layer N tint index N, and every flask model carries all three layers
@@ -50,7 +60,44 @@ public final class CinderflaskClient implements ClientModInitializer {
             client.execute(() -> CinderflaskConfig.applyServerValues(sipCooldownTicks, ticksPerPhase));
         });
 
+        // Datapacks are server-side, so the table arrives over the wire already resolved. Without
+        // this the intake would not know what it is allowed to take.
+        ClientPlayNetworking.registerGlobalReceiver(ConfigSync.TABLE_CHANNEL, (client, handler, buf, sender) -> {
+            List<IngredientTable.Parsed> entries = new ArrayList<>();
+
+            int items = buf.readVarInt();
+            for (int i = 0; i < items; i++) {
+                ItemStack[] matching = new ItemStack[buf.readVarInt()];
+                for (int m = 0; m < matching.length; m++) {
+                    matching[m] = new ItemStack(Registries.ITEM.get(buf.readVarInt()));
+                }
+                entries.add(new IngredientTable.Parsed(Ingredient.ofStacks(matching), null, readEntry(buf)));
+            }
+
+            int effects = buf.readVarInt();
+            for (int i = 0; i < effects; i++) {
+                entries.add(new IngredientTable.Parsed(
+                        null, Registries.STATUS_EFFECT.get(buf.readVarInt()), readEntry(buf)));
+            }
+
+            client.execute(() -> IngredientTable.replace(entries));
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(PalateSync.CHANNEL, (client, handler, buf, sender) -> {
+            Palate palate = PalateSync.read(buf);
+            client.execute(() -> PalateSync.setLocal(palate));
+        });
+
         // Leaving a server that had retuned the numbers must not leave them stuck on the client.
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> CinderflaskConfig.restoreLocalValues());
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            CinderflaskConfig.restoreLocalValues();
+            PalateSync.setLocal(Palate.empty());
+        });
+    }
+
+    private static IngredientTable.Entry readEntry(net.minecraft.network.PacketByteBuf buf) {
+        Humours humours = new Humours(buf.readFloat(), buf.readFloat(), buf.readFloat(),
+                buf.readFloat(), buf.readFloat());
+        return new IngredientTable.Entry(humours, buf.readFloat(), buf.readFloat(), buf.readBoolean());
     }
 }

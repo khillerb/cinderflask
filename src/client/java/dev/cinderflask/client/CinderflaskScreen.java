@@ -4,6 +4,8 @@ import dev.cinderflask.Cinderflask;
 import dev.cinderflask.brew.Brew;
 import dev.cinderflask.brew.BrewNbt;
 import dev.cinderflask.brew.IngredientTable;
+import dev.cinderflask.brew.Readout;
+import dev.cinderflask.player.PalateSync;
 import dev.cinderflask.item.CinderflaskItem;
 import dev.cinderflask.screen.CinderflaskScreenHandler;
 import net.minecraft.client.gui.DrawContext;
@@ -66,8 +68,13 @@ public class CinderflaskScreen extends HandledScreen<CinderflaskScreenHandler> {
             drawCentered(context, Text.translatable("cinderflask.gui.nothing"), 58);
         } else {
             drawCentered(context, Text.translatable("cinderflask.gui.doses", BrewNbt.doses(flask)), 20);
-            drawCentered(context, Text.translatable("cinderflask.gui.strength",
-                    brew.amplifier() + 1, String.format("%.1f", brew.durationTicks() / 20f)), 58);
+
+            // Same seam as the tooltip, so what a brew reads like is decided in one place.
+            int line = 52;
+            for (Text described : Readout.describe(brew, PalateSync.local())) {
+                drawCentered(context, described, line);
+                line += 10;
+            }
         }
 
         context.drawText(textRenderer, playerInventoryTitle, playerInventoryTitleX, playerInventoryTitleY,

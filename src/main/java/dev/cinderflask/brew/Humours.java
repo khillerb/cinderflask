@@ -43,6 +43,11 @@ public record Humours(float choleric, float melancholic, float sanguine, float p
     // Wheel access
     // ---------------------------------------------------------------------------------------
 
+    /** The colour of a single humour, by wheel index. */
+    public static int humourColour(int index) {
+        return PALETTE[Math.floorMod(index, WHEEL)];
+    }
+
     /** Reads a wheel position by index, wrapping. 0 is choleric, 3 is phlegmatic. */
     public float wheel(int index) {
         return switch (Math.floorMod(index, WHEEL)) {

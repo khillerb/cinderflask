@@ -1,0 +1,7 @@
+{
+  "corruption": 0.2,
+  "effect": "minecraft:instant_damage",
+  "humours": {
+    "choleric": 2.0
+  }
+}

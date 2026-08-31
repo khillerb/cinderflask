@@ -1,0 +1,6 @@
+{
+  "effect": "minecraft:instant_health",
+  "humours": {
+    "sanguine": 3.0
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "corruption": 0.2,
+  "humours": {
+    "melancholic": 1.0,
+    "phlegmatic": 1.0
+  },
+  "ingredient": {
+    "item": "minecraft:soul_soil"
+  }
+}

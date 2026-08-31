@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.datagen.v1.FabricDataOutput;
 import net.fabricmc.fabric.api.datagen.v1.provider.FabricLanguageProvider;
 import net.fabricmc.fabric.api.datagen.v1.provider.FabricRecipeProvider;
 import net.minecraft.data.server.recipe.RecipeJsonProvider;
+import net.minecraft.data.server.recipe.ComplexRecipeJsonBuilder;
 import net.minecraft.data.server.recipe.ShapedRecipeJsonBuilder;
 import net.minecraft.item.Items;
 import net.minecraft.recipe.book.RecipeCategory;
@@ -24,6 +25,7 @@ public class CinderflaskDataGenerator implements DataGeneratorEntrypoint {
     public void onInitializeDataGenerator(FabricDataGenerator generator) {
         FabricDataGenerator.Pack pack = generator.createPack();
         pack.addProvider(Recipes::new);
+        pack.addProvider(BrewingProvider::new);
         pack.addProvider(EnglishLanguage::new);
     }
 
@@ -43,6 +45,8 @@ public class CinderflaskDataGenerator implements DataGeneratorEntrypoint {
                     .criterion(hasItem(Items.GLASS_BOTTLE), conditionsFromItem(Items.GLASS_BOTTLE))
                     .criterion(hasItem(Items.GOLD_INGOT), conditionsFromItem(Items.GOLD_INGOT))
                     .offerTo(exporter);
+
+            ComplexRecipeJsonBuilder.create(Cinderflask.CORK_RECIPE).offerTo(exporter, "cinderflask:cork");
         }
     }
 
@@ -54,6 +58,38 @@ public class CinderflaskDataGenerator implements DataGeneratorEntrypoint {
         @Override
         public void generateTranslations(TranslationBuilder builder) {
             builder.add(Cinderflask.CINDERFLASK, "Cinderflask");
+            builder.add(Cinderflask.SUMP, "Sump");
+
+            builder.add("cinderflask.tooltip.sump", "Thick, and it moves when you are not looking.");
+            builder.add("cinderflask.message.uncorked", "It is not corked. Nothing is finished.");
+            builder.add("cinderflask.message.poured", "You pour it out.");
+            builder.add("cinderflask.message.washed", "You rinse the flask clean.");
+
+            builder.add("cinderflask.humour.choleric", "choleric");
+            builder.add("cinderflask.humour.melancholic", "melancholic");
+            builder.add("cinderflask.humour.sanguine", "sanguine");
+            builder.add("cinderflask.humour.phlegmatic", "phlegmatic");
+
+            builder.add("cinderflask.strength.faint", "a trace of");
+            builder.add("cinderflask.strength.some", "some");
+            builder.add("cinderflask.strength.strong", "strongly");
+            builder.add("cinderflask.strength.overwhelming", "overwhelmingly");
+            builder.add("cinderflask.readout.part", "%s %s");
+            builder.add("cinderflask.readout.rough", "%s in the mouth.");
+
+            builder.add("cinderflask.body.thin", "Thin");
+            builder.add("cinderflask.body.even", "Even");
+            builder.add("cinderflask.body.thick", "Thick");
+
+            builder.add("cinderflask.impression.choleric", "It smells sharp, and it is not patient.");
+            builder.add("cinderflask.impression.melancholic", "Cold, and it sits heavy in the glass.");
+            builder.add("cinderflask.impression.sanguine", "Sweet. Something in it wants you well.");
+            builder.add("cinderflask.impression.phlegmatic", "Sour, and it does not smell like much at all.");
+
+            builder.add("cinderflask.state.empty", "Empty");
+            builder.add("cinderflask.state.working", "Working");
+            builder.add("cinderflask.state.sealed", "Sealed");
+            builder.add("cinderflask.state.ruined", "Ruined");
 
             builder.add("cinderflask.tooltip.empty", "Empty. Something ought to go in it.");
             builder.add("cinderflask.tooltip.ruined", "Something has died in here.");

@@ -1,0 +1,7 @@
+{
+  "corruption": 0.1,
+  "effect": "minecraft:nausea",
+  "humours": {
+    "phlegmatic": 2.0
+  }
+}

@@ -3,17 +3,20 @@ package dev.cinderflask.brew;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtList;
 import net.minecraft.nbt.NbtFloat;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * The bridge between the pure brew maths and an item stack.
  *
- * <p>Phase is never stored. The flask records the world time it was sealed, and the current phase is
+ * <p>Phase is never stored. The flask records the world time it was corked, and the current phase is
  * worked out on read from how long ago that was and how fast the vessel turns — so a brew ages in a
  * chest, in a hopper, and on a server nobody is logged into, without anything having to tick.
+ *
+ * <p>An uncorked brew has no seal time and therefore no age at all. That is the whole point of the
+ * working state: you can take as long as you like composing one.
  */
 public final class BrewNbt {
     /** Half an in-game day. A full turn of the wheel is two days, about forty minutes of play. */
@@ -22,6 +25,7 @@ public final class BrewNbt {
     private static final String ROOT = "Brew";
     private static final String HUMOURS = "H";
     private static final String SEALED_AT = "Sealed";
+    private static final String CORKED = "Corked";
     private static final String CORRUPTION = "Corruption";
     private static final String CAPACITY = "Capacity";
     private static final String DOSES = "Doses";
@@ -58,7 +62,8 @@ public final class BrewNbt {
     }
 
     private static float phaseOf(ItemStack stack, NbtCompound root, @Nullable World world) {
-        if (world == null) {
+        // No seal time means it has not been corked yet, so it is not ageing.
+        if (world == null || !root.contains(SEALED_AT, NbtElement.LONG_TYPE)) {
             return 0;
         }
 
@@ -66,9 +71,12 @@ public final class BrewNbt {
         return (float) elapsed / TICKS_PER_PHASE * temper(stack).rate();
     }
 
-    /** Seals a brew into the flask, starting its clock from now. */
-    public static void seal(ItemStack stack, Brew brew, World world, int doses) {
-        NbtCompound root = new NbtCompound();
+    /** Writes a brew without touching whether or when it was corked. */
+    public static void store(ItemStack stack, Brew brew, int doses) {
+        NbtCompound nbt = stack.getOrCreateNbt();
+        NbtCompound root = nbt.contains(ROOT, NbtElement.COMPOUND_TYPE)
+                ? nbt.getCompound(ROOT)
+                : new NbtCompound();
 
         NbtList values = new NbtList();
         values.add(NbtFloat.of(brew.sealed().choleric()));
@@ -78,12 +86,60 @@ public final class BrewNbt {
         values.add(NbtFloat.of(brew.sealed().quintessence()));
 
         root.put(HUMOURS, values);
-        root.putLong(SEALED_AT, world.getTime() - (long) (brew.phase() * TICKS_PER_PHASE));
         root.putFloat(CORRUPTION, brew.addedCorruption());
         root.putFloat(CAPACITY, brew.capacity());
 
-        stack.getOrCreateNbt().put(ROOT, root);
+        nbt.put(ROOT, root);
         setDoses(stack, doses);
+    }
+
+    /**
+     * Writes a brew that already has an age, by backdating its seal time. Used by the tests and, from
+     * Phase 4, by solera top-ups.
+     */
+    public static void seal(ItemStack stack, Brew brew, World world, int doses) {
+        store(stack, brew, doses);
+        cork(stack);
+
+        stack.getOrCreateNbt().getCompound(ROOT)
+                .putLong(SEALED_AT, world.getTime() - (long) (brew.phase() * TICKS_PER_PHASE));
+    }
+
+    public static boolean isCorked(ItemStack stack) {
+        NbtCompound nbt = stack.getNbt();
+        return nbt != null && nbt.contains(ROOT, NbtElement.COMPOUND_TYPE)
+                && nbt.getCompound(ROOT).getBoolean(CORKED);
+    }
+
+    /** Closes the flask. The clock does not start until {@link #stampIfNeeded} sees it in a world. */
+    public static void cork(ItemStack stack) {
+        NbtCompound nbt = stack.getNbt();
+        if (nbt != null && nbt.contains(ROOT, NbtElement.COMPOUND_TYPE)) {
+            nbt.getCompound(ROOT).putBoolean(CORKED, true);
+        }
+    }
+
+    /**
+     * Starts the clock on a flask that has been corked but never seen a world.
+     *
+     * <p>Corking happens on a crafting bench, and a crafting recipe has no world to read a time from,
+     * so the stamp is deferred to the first inventory tick. It happens once and never again.
+     *
+     * @return true if this call was the one that started it
+     */
+    public static boolean stampIfNeeded(ItemStack stack, World world) {
+        NbtCompound nbt = stack.getNbt();
+        if (nbt == null || !nbt.contains(ROOT, NbtElement.COMPOUND_TYPE)) {
+            return false;
+        }
+
+        NbtCompound root = nbt.getCompound(ROOT);
+        if (!root.getBoolean(CORKED) || root.contains(SEALED_AT, NbtElement.LONG_TYPE)) {
+            return false;
+        }
+
+        root.putLong(SEALED_AT, world.getTime());
+        return true;
     }
 
     public static void empty(ItemStack stack) {

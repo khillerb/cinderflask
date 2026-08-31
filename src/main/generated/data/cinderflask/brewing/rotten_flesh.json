@@ -1,0 +1,9 @@
+{
+  "corruption": 0.15,
+  "humours": {
+    "phlegmatic": 1.0
+  },
+  "ingredient": {
+    "item": "minecraft:rotten_flesh"
+  }
+}

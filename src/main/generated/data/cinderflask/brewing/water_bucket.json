@@ -1,0 +1,7 @@
+{
+  "base": true,
+  "body": 1.0,
+  "ingredient": {
+    "item": "minecraft:water_bucket"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "base": true,
+  "body": 3.0,
+  "humours": {
+    "melancholic": 1.0,
+    "sanguine": 2.0
+  },
+  "ingredient": {
+    "item": "minecraft:honey_bottle"
+  }
+}

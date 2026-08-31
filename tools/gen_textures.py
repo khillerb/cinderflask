@@ -52,6 +52,10 @@ PALETTE = {
     "W": (255, 255, 255, 255),
     "M": (206, 206, 206, 255),
     "D": (162, 162, 162, 255),
+
+    # Sump: what a brew turns into. Bilious, and deliberately unappetising.
+    "m": (58, 62, 38, 255),
+    "n": (86, 92, 52, 255),
 }
 
 # Hottest last, so an index walks the ramp upwards.
@@ -197,6 +201,31 @@ def mote_frames() -> Image.Image:
                 sheet.putpixel((hx, top + hy), (200, 200, 200, 150))
 
     return sheet
+
+
+SUMP = [
+    "................",
+    "................",
+    "................",
+    "....KKKKKKK.....",
+    "...KmmmmmmmK....",
+    "..KmnnmmnnmmK...",
+    "..KmnKmmnnmmmK..",
+    "..KmmnnmKmnnmK..",
+    "..KmnnmmnnKmmK..",
+    "..KmmnnmnnmmmK..",
+    "...KmnnKmnnmK...",
+    "...KmmnnmmmmK...",
+    "....KmmnnnmK....",
+    ".....KKKKKK.....",
+    "................",
+    "................",
+]
+
+
+def sump() -> Image.Image:
+    """A jar of what a brew becomes. Deliberately unappetising."""
+    return draw(SUMP)
 
 
 def draw(rows: list[str]) -> Image.Image:
@@ -363,6 +392,7 @@ def main() -> None:
 
     written = {os.path.join(ITEM_DIR, name + ".png"): art for name, art in states.items()}
     written[os.path.join(ITEM_DIR, "cinderflask_mote.png")] = mote_frames()
+    written[os.path.join(ITEM_DIR, "sump.png")] = sump()
     written[os.path.join(GUI_DIR, "cinderflask.png")] = gui()
     written[os.path.join(ASSET_DIR, "icon.png")] = icon()
     written[os.path.join(DOCS_DIR, "preview.png")] = preview(states)

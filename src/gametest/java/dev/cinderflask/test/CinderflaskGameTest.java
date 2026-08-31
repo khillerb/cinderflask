@@ -42,6 +42,7 @@ public class CinderflaskGameTest implements FabricGameTest {
         ServerWorld world = context.getWorld();
         ItemStack flask = flask();
 
+        Brewing.addBase(flask, IngredientTable.lookup(new ItemStack(Items.WATER_BUCKET)), 8);
         Brewing.add(flask, IngredientTable.lookup(new ItemStack(Items.HONEYCOMB)), world, 8);
         Brewing.add(flask, IngredientTable.lookup(new ItemStack(Items.BLAZE_POWDER)), world, 8);
 
@@ -55,9 +56,9 @@ public class CinderflaskGameTest implements FabricGameTest {
                     + brew.sealed().choleric());
         }
 
-        // Minimum capacity of 1 plus the honeycomb's 2.
-        if (Math.abs(brew.capacity() - 3) > EPSILON) {
-            throw new GameTestException("Expected capacity 3, got " + brew.capacity());
+        // Minimum capacity of 1, plus water's 1 and the honeycomb's 2.
+        if (Math.abs(brew.capacity() - 4) > EPSILON) {
+            throw new GameTestException("Expected capacity 4, got " + brew.capacity());
         }
 
         context.complete();
@@ -67,6 +68,8 @@ public class CinderflaskGameTest implements FabricGameTest {
     public void bodyIsCappedByTheVesselCeiling(TestContext context) {
         ServerWorld world = context.getWorld();
         ItemStack flask = flask();
+
+        Brewing.addBase(flask, IngredientTable.lookup(new ItemStack(Items.WATER_BUCKET)), 8);
 
         // Three pitcher plants is 18 body against a ceiling of 8.
         for (int i = 0; i < 3; i++) {
@@ -87,7 +90,9 @@ public class CinderflaskGameTest implements FabricGameTest {
         ServerWorld world = context.getWorld();
         ItemStack flask = flask();
 
-        // No body at all, so capacity stays at the minimum while the essence keeps climbing.
+        Brewing.addBase(flask, IngredientTable.lookup(new ItemStack(Items.WATER_BUCKET)), 8);
+
+        // No body beyond the base, so capacity stays low while the essence keeps climbing.
         for (int i = 0; i < 4; i++) {
             Brewing.add(flask, IngredientTable.lookup(new ItemStack(Items.BLAZE_POWDER)), world, 8);
         }

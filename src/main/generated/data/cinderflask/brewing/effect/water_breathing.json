@@ -1,0 +1,7 @@
+{
+  "effect": "minecraft:water_breathing",
+  "humours": {
+    "phlegmatic": 2.0,
+    "sanguine": 1.0
+  }
+}

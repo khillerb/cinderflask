@@ -128,8 +128,17 @@ public class CinderflaskScreenHandler extends ScreenHandler {
             return;
         }
 
-        dev.cinderflask.brew.Brewing.add(flask, entry, player.getWorld(), vessel.ceiling());
-        ingredient.decrement(1);
+        dev.cinderflask.brew.BrewState state =
+                dev.cinderflask.brew.BrewState.of(flask, player.getWorld());
+
+        boolean took = state.acceptsBase() && entry.base()
+                ? dev.cinderflask.brew.Brewing.addBase(flask, entry, vessel.ceiling())
+                : state.acceptsIngredients()
+                        && dev.cinderflask.brew.Brewing.add(flask, entry, player.getWorld(), vessel.ceiling());
+
+        if (took || state.acceptsIngredients()) {
+            ingredient.decrement(1);
+        }
     }
 
     /** Rejects anything the flask will not swallow, so the click simply does not happen. */
@@ -141,6 +150,11 @@ public class CinderflaskScreenHandler extends ScreenHandler {
         @Override
         public boolean canInsert(ItemStack stack) {
             return dev.cinderflask.brew.IngredientTable.isIngredient(stack);
+        }
+
+        @Override
+        public int getMaxItemCount() {
+            return 1;
         }
     }
 }

@@ -1,0 +1,9 @@
+{
+  "humours": {
+    "phlegmatic": 2.0,
+    "sanguine": 1.0
+  },
+  "ingredient": {
+    "item": "minecraft:spore_blossom"
+  }
+}

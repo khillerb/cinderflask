@@ -1,0 +1,7 @@
+{
+  "corruption": 0.1,
+  "effect": "minecraft:hunger",
+  "humours": {
+    "melancholic": 1.0
+  }
+}

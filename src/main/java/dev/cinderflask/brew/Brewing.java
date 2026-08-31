@@ -2,13 +2,13 @@ package dev.cinderflask.brew;
 
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Adding things to a flask.
+ * Composing a brew: the base, then the ingredients, then the cork.
  *
- * <p>The clock starts on the first ingredient and is not reset by later ones, so a brew you keep
- * working on keeps ageing while you work on it. Phase 3 puts an explicit seal step in front of this
- * and moves the table to datapack JSON; the arithmetic here does not change.
+ * <p>Nothing here ages. A working brew has no clock at all, which is what lets you take as long as
+ * you like over it — the clock starts when the flask is corked.
  */
 public final class Brewing {
     /** A flask with no body ingredient in it still holds a little. */
@@ -18,49 +18,78 @@ public final class Brewing {
     }
 
     /**
-     * Folds one ingredient into whatever the flask already holds.
+     * Puts a base in an empty flask. Whatever the vessel was fired against leans it from the start,
+     * and so does everything the flask has held before.
      *
-     * @param ceiling how much capacity this vessel will allow body ingredients to reach
-     * @return false if the brew spoiled, in which case the flask now holds Sump
+     * @return false if this flask already holds something
      */
-    public static boolean add(ItemStack flask, IngredientTable.Entry entry, World world, float ceiling) {
+    public static boolean addBase(ItemStack flask, IngredientTable.Entry base, float ceiling) {
+        if (BrewNbt.hasBrew(flask)) {
+            return false;
+        }
+
+        Temper temper = BrewNbt.temper(flask);
+        Humours humours = base.humours().plus(temper.bias()).plus(Vessel.drift(flask));
+        float capacity = Math.min(ceiling, MINIMUM_CAPACITY + base.body());
+
+        Brew brewed = new Brew(humours, 0, temper.corruption() + base.corruption(), capacity);
+        BrewNbt.store(flask, brewed, brewed.doses());
+        return true;
+    }
+
+    /**
+     * Folds one ingredient into a working brew.
+     *
+     * @return false if the flask has no base yet, is already corked, or the brew spoiled
+     */
+    public static boolean add(ItemStack flask, IngredientTable.Entry entry, @Nullable World world, float ceiling) {
         Brew existing = BrewNbt.read(flask, world);
-
-        Humours humours = existing == null ? Humours.EMPTY : existing.sealed();
-        float capacity = existing == null ? MINIMUM_CAPACITY : existing.capacity();
-        float corruption = existing == null ? 0 : existing.addedCorruption();
-        float phase = existing == null ? 0 : existing.phase();
-
-        boolean starting = existing == null;
-        if (starting) {
-            // Whatever the vessel was fired against leans the brew and lends its own filth, and so
-            // does everything it has held before — a flask used only for one humour starts pulling
-            // every new brew that way.
-            Temper temper = BrewNbt.temper(flask);
-            humours = humours.plus(temper.bias()).plus(Vessel.drift(flask));
-            corruption += temper.corruption();
+        if (existing == null || BrewNbt.isCorked(flask)) {
+            return false;
         }
 
-        humours = humours.plus(entry.humours());
-        capacity = Math.min(ceiling, capacity + entry.body());
+        Humours humours = existing.sealed().plus(entry.humours());
+        float capacity = Math.min(ceiling, existing.capacity() + entry.body());
+        float corruption = existing.addedCorruption() + entry.corruption();
 
-        Brew brewed = new Brew(humours, phase, corruption, capacity);
-        BrewNbt.seal(flask, brewed, world, brewed.doses());
-
-        if (starting) {
-            Vessel.record(flask, humours);
-        }
+        Brew brewed = new Brew(humours, 0, corruption, capacity);
+        BrewNbt.store(flask, brewed, brewed.doses());
 
         return !brewed.isSpoiled();
     }
 
-    /** Whether the flask could take this ingredient without overflowing the vessel. */
-    public static boolean wouldSpoil(ItemStack flask, IngredientTable.Entry entry, World world, float ceiling) {
-        Brew existing = BrewNbt.read(flask, world);
+    /**
+     * Corks a working brew, which is what starts its clock and what the flask remembers it by.
+     *
+     * <p>Seasoning is recorded here rather than when the first ingredient went in, so the flask learns
+     * the composition you actually finished with.
+     *
+     * @return false if there was nothing to cork
+     */
+    public static boolean cork(ItemStack flask) {
+        if (!BrewNbt.hasBrew(flask) || BrewNbt.isCorked(flask)) {
+            return false;
+        }
 
-        Humours humours = (existing == null ? Humours.EMPTY : existing.sealed()).plus(entry.humours());
-        float capacity = Math.min(ceiling,
-                (existing == null ? MINIMUM_CAPACITY : existing.capacity()) + entry.body());
+        Brew brew = BrewNbt.read(flask, null);
+        if (brew == null) {
+            return false;
+        }
+
+        Vessel.record(flask, brew.sealed());
+        BrewNbt.cork(flask);
+        return true;
+    }
+
+    /** Whether the flask could take this ingredient without overflowing the vessel. */
+    public static boolean wouldSpoil(ItemStack flask, IngredientTable.Entry entry, @Nullable World world, float ceiling) {
+        Brew existing = BrewNbt.read(flask, world);
+        if (existing == null) {
+            return false;
+        }
+
+        Humours humours = existing.sealed().plus(entry.humours());
+        float capacity = Math.min(ceiling, existing.capacity() + entry.body());
 
         return new Brew(humours, 0, 0, capacity).isSpoiled();
     }

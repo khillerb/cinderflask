@@ -1,0 +1,7 @@
+{
+  "effect": "minecraft:fire_resistance",
+  "humours": {
+    "choleric": 2.0,
+    "melancholic": 1.0
+  }
+}

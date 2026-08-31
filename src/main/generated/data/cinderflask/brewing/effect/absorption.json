@@ -1,0 +1,7 @@
+{
+  "effect": "minecraft:absorption",
+  "humours": {
+    "melancholic": 2.0,
+    "sanguine": 1.0
+  }
+}
