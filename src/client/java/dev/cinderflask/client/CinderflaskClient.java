@@ -4,8 +4,11 @@ import dev.cinderflask.Cinderflask;
 import dev.cinderflask.config.CinderflaskConfig;
 import dev.cinderflask.brew.Humours;
 import dev.cinderflask.brew.IngredientTable;
+import dev.cinderflask.brew.Dregs;
 import dev.cinderflask.brew.Vessel;
+import dev.cinderflask.item.AlmanacItem;
 import dev.cinderflask.item.CinderflaskItem;
+import dev.cinderflask.item.SumpItem;
 import dev.cinderflask.net.ConfigSync;
 import dev.cinderflask.player.Palate;
 import dev.cinderflask.player.PalateSync;
@@ -30,6 +33,9 @@ public final class CinderflaskClient implements ClientModInitializer {
     private static final int LIQUID_TINT = 1;
     private static final int MOTE_TINT = 2;
 
+    /** Dregs and sump are two-layer: an untinted shape, then the settled brew over it. */
+    private static final int SETTLED_TINT = 1;
+
     @Override
     public void onInitializeClient() {
         HandledScreens.register(Cinderflask.SCREEN_HANDLER, CinderflaskScreen::new);
@@ -37,6 +43,9 @@ public final class CinderflaskClient implements ClientModInitializer {
         // The item class compiles into the dedicated-server path, so it cannot reference Screen
         // itself.
         CinderflaskItem.detailModifierHeld = Screen::hasShiftDown;
+
+        // Same reason: the item lives in the common source set and cannot name a screen.
+        AlmanacItem.opener = () -> MinecraftClient.getInstance().setScreen(new AlmanacScreen());
 
         ModelPredicateProviderRegistry.register(
                 Cinderflask.CINDERFLASK,
@@ -53,6 +62,21 @@ public final class CinderflaskClient implements ClientModInitializer {
                     default -> 0xFFFFFFFF;
                 },
                 Cinderflask.CINDERFLASK);
+
+        // Dregs and sump both remember a brew, and both used to throw that away at render time and
+        // come out as the same olive blob. Same mechanism as the flask's liquid: an untinted shape
+        // over a greyscale layer the brew colours.
+        ColorProviderRegistry.ITEM.register(
+                (stack, tintIndex) -> tintIndex == SETTLED_TINT
+                        ? 0xFF000000 | Dregs.humours(stack).colour()
+                        : 0xFFFFFFFF,
+                Cinderflask.DREGS);
+
+        ColorProviderRegistry.ITEM.register(
+                (stack, tintIndex) -> tintIndex == SETTLED_TINT
+                        ? 0xFF000000 | SumpItem.colour(stack)
+                        : 0xFFFFFFFF,
+                Cinderflask.SUMP);
 
         ClientPlayNetworking.registerGlobalReceiver(ConfigSync.CHANNEL, (client, handler, buf, sender) -> {
             CinderflaskConfig fromServer = ConfigSync.read(buf);

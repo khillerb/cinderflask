@@ -31,8 +31,6 @@ PALETTE = {
     "G": (122, 84, 26, 255),      # gold, shadow
     "g": (186, 138, 45, 255),     # gold, mid
     "h": (243, 204, 102, 255),    # gold, highlight
-    "C": (25, 27, 34, 255),       # cold glass, shadow
-    "D": (38, 42, 52, 255),       # cold glass, mid
     "L": (45, 51, 63, 255),       # glass, shadow
     "l": (68, 77, 92, 255),       # glass, mid
     "w": (120, 134, 154, 255),    # glass, rim-light
@@ -53,10 +51,12 @@ PALETTE = {
     "W": (255, 255, 255, 255),
     "M": (206, 206, 206, 255),
     "D": (162, 162, 162, 255),
+    "X": (108, 108, 108, 255),
 
-    # Sump: what a brew turns into. Bilious, and deliberately unappetising.
-    "m": (58, 62, 38, 255),
-    "n": (86, 92, 52, 255),
+    # Sand, for the sinter. A flask packed in it and fired is how a cracked one is mended.
+    "A": (150, 128, 88, 255),     # sand, shadow
+    "B": (198, 176, 126, 255),    # sand, mid
+    "E": (228, 210, 166, 255),    # sand, lit
 }
 
 # Hottest last, so an index walks the ramp upwards.
@@ -169,44 +169,8 @@ TIER_PALETTES = {
 }
 
 
-DREGS = [
-    "................",
-    "................",
-    "................",
-    "................",
-    "................",
-    ".....KKKKKK.....",
-    "....KmnmmnmK....",
-    "....KnmmnmmK....",
-    "...KmmnmmnmmK...",
-    "...KmnmmnmmnK...",
-    "...KmmnmmmnmK...",
-    "....KKKKKKKK....",
-    "................",
-    "................",
-    "................",
-    "................",
-]
 
 
-SINTER = [
-    "................",
-    "................",
-    "...KKKKKKKKK....",
-    "..KgghgghgggK...",
-    "..KghggghgghK...",
-    "..KgKKKKKKggK...",
-    "..KgKLllwKgggK..",
-    "..KgKLllwKghgK..",
-    "..KgKLllwKgggK..",
-    "..KgKKKKKKghgK..",
-    "..KghgggghgggK..",
-    "..KggghgggghgK..",
-    "...KKKKKKKKKK...",
-    "................",
-    "................",
-    "................",
-]
 
 
 def recoloured(rows: list[str], swaps: dict) -> Image.Image:
@@ -272,29 +236,184 @@ def mote_frames() -> Image.Image:
     return sheet
 
 
-SUMP = [
+
+
+# Two silhouettes that have to be told apart at sixteen pixels: dregs settle into a heap, sump
+# spreads into a puddle. They used to share both a shape and a palette, and read as the same blob.
+DREGS_MASK = [
     "................",
     "................",
     "................",
-    "....KKKKKKK.....",
-    "...KmmmmmmmK....",
-    "..KmnnmmnnmmK...",
-    "..KmnKmmnnmmmK..",
-    "..KmmnnmKmnnmK..",
-    "..KmnnmmnnKmmK..",
-    "..KmmnnmnnmmmK..",
-    "...KmnnKmnnmK...",
-    "...KmmnnmmmmK...",
-    "....KmmnnnmK....",
-    ".....KKKKKK.....",
     "................",
+    "................",
+    "................",
+    "................",
+    "......####......",
+    ".....######.....",
+    "....########....",
+    "...##########...",
+    "..############..",
+    "..############..",
+    "...##########...",
+    "....########....",
     "................",
 ]
 
+SUMP_MASK = [
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    ".....######.....",
+    "...##########...",
+    ".##############.",
+    "################",
+    "################",
+    "################",
+    ".##############.",
+    "...##########...",
+    ".....######.....",
+    "................",
+]
 
-def sump() -> Image.Image:
-    """A jar of what a brew becomes. Deliberately unappetising."""
-    return draw(SUMP)
+# Bubbles rising through it, and the wet highlight that stops it reading as a lump of dirt.
+BUBBLES = [(4, 11), (11, 12)]
+GLEAM = [(4, 8), (5, 8), (4, 9)]
+
+
+def outline_and_fill(mask: list[str], grainy: bool) -> tuple[list[str], list[str]]:
+    """Splits a solid shape into an untinted outline and a greyscale interior.
+
+    <p>The interior is the layer the game tints, exactly as the flask's liquid layer is, so dregs
+    left by a choleric brew come out amber and a kelpwine's come out green. It is shaded by depth so
+    a tinted shape still reads as a form and not a flat patch of colour.
+    """
+    outline = blank()
+    fill = blank()
+
+    filled = [[cell == "#" for cell in row] for row in mask]
+    rows = [y for y, row in enumerate(mask) if "#" in row]
+    top, bottom = (rows[0], rows[-1]) if rows else (0, 0)
+    depth = max(1, bottom - top)
+
+    for y, row in enumerate(mask):
+        for x, cell in enumerate(row):
+            if cell != "#":
+                continue
+
+            edge = any(not inside(filled, x + dx, y + dy)
+                       for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)))
+
+            if edge:
+                outline[y][x] = "K"
+                continue
+
+            # Brightest along the top, where the light lands, falling away with depth.
+            shade = (y - top) / depth
+            step = "W" if shade < 0.2 else "M" if shade < 0.55 else "D" if shade < 0.85 else "X"
+
+            # Grain, so a heap of sediment does not read as a smooth jelly.
+            if grainy and hash_jitter(x, y) > 0.62:
+                step = {"W": "M", "M": "D", "D": "X", "X": "D"}[step]
+
+            fill[y][x] = step
+
+    return ["".join(r) for r in outline], ["".join(r) for r in fill]
+
+
+def inside(filled: list[list[bool]], x: int, y: int) -> bool:
+    return 0 <= x < 16 and 0 <= y < 16 and filled[y][x]
+
+
+def sump_layers() -> tuple[list[str], list[str]]:
+    """A wet mass. Bubbles rising through it, and a highlight so it reads as liquid, not soil."""
+    outline, fill = outline_and_fill(SUMP_MASK, grainy=False)
+    outline = [list(row) for row in outline]
+    fill = [list(row) for row in fill]
+
+    for x, y in BUBBLES:
+        if fill[y][x] != ".":
+            outline[y][x] = "K"
+            fill[y][x] = "."
+
+    # Specular, kept in the tinted layer so it takes the brew's own colour rather than going white.
+    for x, y in GLEAM:
+        if fill[y][x] != ".":
+            fill[y][x] = "W"
+
+    return ["".join(r) for r in outline], ["".join(r) for r in fill]
+
+
+def sinter() -> Image.Image:
+    """A cracked flask caked in sand, ready for the fire.
+
+    Built on the flask's own shell so the silhouette stays a flask — a sand block with something
+    buried in it reads as a picture frame, which is what the first attempt looked like.
+    """
+    grid = [list(row) for row in shell()]
+
+    # Sand packed over it: heavier towards the foot, thinning out near the neck, so the shape still
+    # shows through at the top.
+    for y in range(16):
+        for x in range(16):
+            # The outline is never buried, or the flask stops being a flask.
+            if grid[y][x] in (".", "K"):
+                continue
+
+            packed = hash_jitter(x, y) < 0.12 + 0.34 * (y / 15)
+            if packed:
+                grade = hash_jitter(x + 7, y + 3)
+                grid[y][x] = "E" if grade > 0.7 else "A" if grade < 0.3 else "B"
+
+    # And a heap of it round the base, so it is sitting in sand rather than dusted with it.
+    for y, (left, right) in ((14, (2, 13)), (15, (0, 15))):
+        for x in range(left, right + 1):
+            grade = hash_jitter(x, y * 3)
+            grid[y][x] = "E" if grade > 0.72 else "A" if grade < 0.28 else "B"
+
+    for x in range(16):
+        grid[15][x] = "K" if x in (0, 15) else grid[15][x]
+
+    return draw(["".join(row) for row in grid])
+
+
+def almanac() -> Image.Image:
+    """The book. Blackened leather, a gold spine, and the same ember mark the flask carries."""
+    grid = blank()
+    left, right, top, bottom = 2, 13, 2, 13
+
+    for y in range(top, bottom + 1):
+        for x in range(left, right + 1):
+            grid[y][x] = "s"
+
+    for x in range(left, right + 1):
+        grid[top][x] = "K"
+        grid[bottom][x] = "K"
+    for y in range(top, bottom + 1):
+        grid[y][left] = "K"
+        grid[y][right] = "K"
+
+    # Spine: gold bands down the left, then the fold.
+    for y in range(top + 1, bottom):
+        grid[y][left + 1] = "h" if y % 3 == 0 else "g"
+        grid[y][left + 2] = "K"
+
+    # Page edges down the right, so it reads as a closed book rather than a tile.
+    for y in range(top + 1, bottom):
+        grid[y][right - 1] = "S"
+
+    # The ember, centred on the cover.
+    for (x, y), shade in {
+        (8, 6): "5", (9, 6): "5",
+        (7, 7): "5", (8, 7): "7", (9, 7): "7", (10, 7): "5",
+        (7, 8): "5", (8, 8): "7", (9, 8): "7", (10, 8): "5",
+        (8, 9): "5", (9, 9): "5",
+    }.items():
+        grid[y][x] = shade
+
+    return draw(["".join(row) for row in grid])
 
 
 def draw(rows: list[str]) -> Image.Image:
@@ -801,9 +920,17 @@ def main() -> None:
 
     written = {os.path.join(ITEM_DIR, name + ".png"): art for name, art in states.items()}
     written[os.path.join(ITEM_DIR, "cinderflask_mote.png")] = mote_frames()
-    written[os.path.join(ITEM_DIR, "sump.png")] = sump()
-    written[os.path.join(ITEM_DIR, "dregs.png")] = draw(DREGS)
-    written[os.path.join(ITEM_DIR, "sinter.png")] = draw(SINTER)
+    dregs_outline, dregs_fill = outline_and_fill(DREGS_MASK, grainy=True)
+    sump_outline, sump_fill = sump_layers()
+
+    # Two layers apiece, the way the flask already works: an untinted shape and a greyscale
+    # interior the game colours from the brew it remembers.
+    written[os.path.join(ITEM_DIR, "dregs.png")] = draw(dregs_outline)
+    written[os.path.join(ITEM_DIR, "dregs_settled.png")] = draw(dregs_fill)
+    written[os.path.join(ITEM_DIR, "sump.png")] = draw(sump_outline)
+    written[os.path.join(ITEM_DIR, "sump_settled.png")] = draw(sump_fill)
+    written[os.path.join(ITEM_DIR, "sinter.png")] = sinter()
+    written[os.path.join(ITEM_DIR, "almanac.png")] = almanac()
     written[os.path.join(GUI_DIR, "cinderflask.png")] = gui()
     written[os.path.join(ASSET_DIR, "icon.png")] = icon()
     written[os.path.join(DOCS_DIR, "preview.png")] = preview(states)

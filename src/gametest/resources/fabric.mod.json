@@ -11,7 +11,8 @@
       "dev.cinderflask.test.CinderflaskGameTest",
       "dev.cinderflask.test.BrewingLoopTest",
       "dev.cinderflask.test.VesselLifeTest",
-      "dev.cinderflask.test.DraughtTest"
+      "dev.cinderflask.test.DraughtTest",
+      "dev.cinderflask.test.AlmanacTest"
     ]
   },
   "depends": {

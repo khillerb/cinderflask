@@ -58,6 +58,16 @@ public final class VesselRecipes {
                     && total(inventory) == 3;
         }
 
+        /** The vessel that goes in, so the Almanac can chain the ladder from the recipes themselves. */
+        public CinderflaskItem from() {
+            return from;
+        }
+
+        /** And the one that comes out. */
+        public CinderflaskItem to() {
+            return to;
+        }
+
         @Override
         public List<Ingredient> inputs() {
             return List.of(Ingredient.ofStacks(new ItemStack(from)), firstCost, secondCost);

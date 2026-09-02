@@ -5,12 +5,14 @@ import dev.cinderflask.brew.Cracking;
 import dev.cinderflask.config.CinderflaskConfig;
 import dev.cinderflask.effect.Draughts;
 import dev.cinderflask.effect.Rebounds;
+import dev.cinderflask.item.AlmanacItem;
 import dev.cinderflask.item.CinderflaskItem;
 import dev.cinderflask.item.DregsItem;
 import dev.cinderflask.item.SinterItem;
 import dev.cinderflask.item.SumpItem;
 import dev.cinderflask.net.ConfigSync;
 import dev.cinderflask.player.PalateSync;
+import dev.cinderflask.recipe.AlmanacRecipe;
 import dev.cinderflask.recipe.CorkRecipe;
 import dev.cinderflask.recipe.MendRecipe;
 import dev.cinderflask.recipe.VesselRecipes;
@@ -61,6 +63,9 @@ public final class Cinderflask implements ModInitializer {
     /** A cracked flask packed in sand, waiting for the fire. */
     public static final SinterItem SINTER = new SinterItem(new FabricItemSettings().maxCount(1));
 
+    /** The book. A map of the whole system, gated on what you have tasted rather than on progress. */
+    public static final AlmanacItem ALMANAC = new AlmanacItem(new FabricItemSettings().maxCount(1));
+
     public static final ScreenHandlerType<CinderflaskScreenHandler> SCREEN_HANDLER =
             new ExtendedScreenHandlerType<>(CinderflaskScreenHandler::new);
 
@@ -70,6 +75,8 @@ public final class Cinderflask implements ModInitializer {
             new SpecialRecipeSerializer<>(VesselRecipes.Solera::new);
     public static final RecipeSerializer<VesselRecipes.Sinter> SINTER_RECIPE =
             new SpecialRecipeSerializer<>(VesselRecipes.Sinter::new);
+    public static final RecipeSerializer<AlmanacRecipe> ALMANAC_RECIPE =
+            new SpecialRecipeSerializer<>(AlmanacRecipe::new);
     public static final RecipeSerializer<MendRecipe> MEND_RECIPE =
             new CookingRecipeSerializer<>(MendRecipe::new, 200);
 
@@ -112,6 +119,7 @@ public final class Cinderflask implements ModInitializer {
         Registry.register(Registries.ITEM, id("sump"), SUMP);
         Registry.register(Registries.ITEM, id("dregs"), DREGS);
         Registry.register(Registries.ITEM, id("sinter"), SINTER);
+        Registry.register(Registries.ITEM, id("almanac"), ALMANAC);
 
         Registry.register(Registries.SCREEN_HANDLER, id("cinderflask"), SCREEN_HANDLER);
 
@@ -119,6 +127,7 @@ public final class Cinderflask implements ModInitializer {
         Registry.register(Registries.RECIPE_SERIALIZER, id("solera"), SOLERA_RECIPE);
         Registry.register(Registries.RECIPE_SERIALIZER, id("sinter"), SINTER_RECIPE);
         Registry.register(Registries.RECIPE_SERIALIZER, id("mend"), MEND_RECIPE);
+        Registry.register(Registries.RECIPE_SERIALIZER, id("almanac"), ALMANAC_RECIPE);
         Registry.register(Registries.RECIPE_SERIALIZER, id("bind"), BIND_RECIPE);
         Registry.register(Registries.RECIPE_SERIALIZER, id("witch_iron"), WITCH_IRON_RECIPE);
         Registry.register(Registries.RECIPE_SERIALIZER, id("aetherglass"), AETHERGLASS_RECIPE);
@@ -130,6 +139,7 @@ public final class Cinderflask implements ModInitializer {
             entries.add(SUMP);
             entries.add(DREGS);
             entries.add(SINTER);
+            entries.add(ALMANAC);
         });
 
         ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(new BrewingRecipes());

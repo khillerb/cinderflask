@@ -62,6 +62,33 @@ The mod is being rebuilt as a witch-brewing mod. Fuel is gone.
 - Fixed: every synthetic EMI page was registered under an id EMI expected to find in the recipe
   manager, so it logged an error for each one on every world join.
 
+**The Almanac**
+
+- A book, crafted from a book and a flask, opening one map you drag and zoom around rather than a
+  set of pages. Hover a node for what it is, click it for the whole entry.
+- The map is not drawn by hand where it does not have to be. The twelve known brews lay themselves
+  out as the wheel they actually are — angle from the humour that leads them, radius from whether
+  reach carries them outward — and the vessel ladder comes from the upgrade recipes. Retune a
+  landmark and its node moves.
+- Each brew shows the ingredient that means it, found the same way the suggested routes find it, so
+  the wheel reads as kelp and cactus and blaze powder rather than twelve identical bottles.
+- How to brew, the five axes and all twelve brews are readable from the first minute. The wheel's
+  turning, the derivations, the endings and the rarer motes fill in as your palate develops, gated
+  on the same Palate that already decides how much a flask's tooltip gives away. Locked nodes still
+  hold their place, so the shape of the system is legible before you have earned it.
+- The layout is written out by the test suite and drawn by `tools/render_almanac.py`, so the map can
+  be looked at without opening the game.
+
+**Art**
+
+- Dregs, sump and the sintered flask redrawn. Dregs and sump were the same two olive tones in
+  slightly different outlines, and the sinter read as a picture frame.
+- Dregs and sump now take their colour from the brew they remember, the same way the flask takes
+  its colour from what is in it — both carried a vector and threw it away at render time. Sump
+  keeps the humours it came from, which is also the hook the corrupt half will want.
+- The sintered flask is built on the flask's own silhouette, so what is caked in sand is visibly
+  the thing you put in.
+
 **Removed**
 
 - The fuel canister mechanic, the furnace mixin, and sparking.

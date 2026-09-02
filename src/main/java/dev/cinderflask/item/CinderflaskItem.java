@@ -164,6 +164,10 @@ public class CinderflaskItem extends Item {
         boolean atWater = lookingAtWater(world, player);
         int doses = BrewNbt.doses(stack);
 
+        // Read before emptying: the sump remembers what it was, and that is where its colour and
+        // the corrupt half of the space both come from.
+        Brew poured = BrewNbt.read(stack, world);
+
         if (world.isClient) {
             return TypedActionResult.success(stack, true);
         }
@@ -178,7 +182,7 @@ public class CinderflaskItem extends Item {
             return TypedActionResult.success(stack);
         }
 
-        ItemStack sump = new ItemStack(Cinderflask.SUMP, Math.max(1, doses));
+        ItemStack sump = SumpItem.of(poured == null ? Humours.EMPTY : poured.current(), doses);
         if (!player.getInventory().insertStack(sump)) {
             player.dropItem(sump, false);
         }

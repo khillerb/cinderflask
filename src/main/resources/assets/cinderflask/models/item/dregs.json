@@ -1,6 +1,7 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "cinderflask:item/dregs"
+    "layer0": "cinderflask:item/dregs",
+    "layer1": "cinderflask:item/dregs_settled"
   }
 }

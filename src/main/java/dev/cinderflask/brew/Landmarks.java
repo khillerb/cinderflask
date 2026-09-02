@@ -42,7 +42,23 @@ public final class Landmarks {
     private static final float CARRIED = 8;
     private static final float REACH = 5;
 
-    public record Landmark(Identifier id, Humours target, String role) {
+    /**
+     * How a landmark was built. The three readings of a humour, and the reason there are twelve.
+     *
+     * <p>Kept on the record rather than worked out from the vector: the Almanac lays the twelve out
+     * as the wheel they actually are, and guessing the shape back from the coordinates would be a
+     * second construction that could disagree with the first.
+     */
+    public enum Shape {
+        /** The humour on its own. */
+        PURE,
+        /** The humour leaning into the next one round. */
+        LEAN,
+        /** The humour carried outward on reach. */
+        CARRIED
+    }
+
+    public record Landmark(Identifier id, Humours target, String role, int humour, Shape shape) {
         public String translationKey() {
             return "cinderflask.landmark." + id.getPath();
         }
@@ -71,17 +87,17 @@ public final class Landmarks {
     }
 
     private static Landmark pure(int humour, String path, String role) {
-        return new Landmark(Cinderflask.id(path), on(humour, PURE), role);
+        return new Landmark(Cinderflask.id(path), on(humour, PURE), role, humour, Shape.PURE);
     }
 
     private static Landmark lean(int humour, String path, String role) {
         return new Landmark(Cinderflask.id(path),
-                on(humour, LEAN).plus(on(humour + 1, LEAN)), role);
+                on(humour, LEAN).plus(on(humour + 1, LEAN)), role, humour, Shape.LEAN);
     }
 
     private static Landmark carried(int humour, String path, String role) {
         return new Landmark(Cinderflask.id(path),
-                on(humour, CARRIED).plus(new Humours(0, 0, 0, 0, REACH)), role);
+                on(humour, CARRIED).plus(new Humours(0, 0, 0, 0, REACH)), role, humour, Shape.CARRIED);
     }
 
     /** A vector with {@code amount} at one wheel position and nothing anywhere else. */
