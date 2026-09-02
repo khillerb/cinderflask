@@ -3,8 +3,10 @@ package dev.cinderflask;
 import dev.cinderflask.brew.BrewingRecipes;
 import dev.cinderflask.brew.Cracking;
 import dev.cinderflask.config.CinderflaskConfig;
+import dev.cinderflask.effect.CorruptDraughts;
 import dev.cinderflask.effect.Draughts;
 import dev.cinderflask.effect.Rebounds;
+import dev.cinderflask.effect.Unspent;
 import dev.cinderflask.item.AlmanacItem;
 import dev.cinderflask.item.CinderflaskItem;
 import dev.cinderflask.item.DregsItem;
@@ -145,7 +147,9 @@ public final class Cinderflask implements ModInitializer {
         ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(new BrewingRecipes());
 
         Draughts.register();
+        CorruptDraughts.register();
         Rebounds.register();
+        Unspent.register();
         Cracking.register();
         ConfigSync.register();
         PalateSync.register();

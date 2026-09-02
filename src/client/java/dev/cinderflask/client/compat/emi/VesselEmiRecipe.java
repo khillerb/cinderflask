@@ -21,10 +21,14 @@ import java.util.List;
  * fifth vessel tier and its page appears without anything here changing.
  */
 public class VesselEmiRecipe extends BasicEmiRecipe {
-    private final String descriptionKey;
+    private static final int WIDTH = 176;
+    private static final int TEXT_TOP = 28;
+
+    private final Text description;
+    private final Text carries;
 
     public VesselEmiRecipe(Identifier id, VesselOperation operation) {
-        super(CinderflaskEmiPlugin.VESSEL, id, 132, 48);
+        super(CinderflaskEmiPlugin.VESSEL, id, WIDTH, 0);
 
         List<EmiIngredient> declared = new ArrayList<>();
         for (Ingredient ingredient : operation.inputs()) {
@@ -33,7 +37,13 @@ public class VesselEmiRecipe extends BasicEmiRecipe {
 
         this.inputs = declared;
         this.outputs = List.of(EmiStack.of(operation.preview()));
-        this.descriptionKey = operation.descriptionKey();
+
+        this.description = Text.translatable(operation.descriptionKey()).formatted(Formatting.GRAY);
+        this.carries = Text.translatable("cinderflask.vessel.carries").formatted(Formatting.DARK_GRAY);
+
+        // Sized from the text rather than guessed at. The old fixed 48 was too short for a sentence
+        // and the old fixed width sent it 234 pixels off the side of the page.
+        this.height = TEXT_TOP + Pages.height(description, WIDTH) + Pages.height(carries, WIDTH) + 4;
     }
 
     @Override
@@ -46,12 +56,10 @@ public class VesselEmiRecipe extends BasicEmiRecipe {
         widgets.addTexture(EmiTexture.EMPTY_ARROW, afterInputs + 4, 5);
         widgets.addSlot(outputs.get(0), afterInputs + 32, 4).recipeContext(this);
 
-        widgets.addText(Text.translatable(descriptionKey).formatted(Formatting.GRAY),
-                0, 28, 0xFFAAAAAA, false);
+        int y = Pages.paragraph(widgets, description, 0, TEXT_TOP, WIDTH, 0xFFAAAAAA);
 
         // The thing that makes these special recipes in the first place, and the thing a static
         // output slot cannot show.
-        widgets.addText(Text.translatable("cinderflask.vessel.carries").formatted(Formatting.DARK_GRAY),
-                0, 38, 0xFF888888, false);
+        Pages.paragraph(widgets, carries, 0, y, WIDTH, 0xFF888888);
     }
 }

@@ -17,6 +17,12 @@ import java.util.List;
 
 /** One ingredient, what it writes into a brew, and what it is for. */
 public class IngredientEmiRecipe extends BasicEmiRecipe {
+    private static final int WIDTH = 184;
+
+    /** Left edge of the text column, clear of the input slot, the arrow and the output slot. */
+    private static final int TEXT_X = 72;
+    private static final int TEXT_WIDTH = WIDTH - TEXT_X;
+
     private static final String[] HUMOUR_KEYS = {
             "cinderflask.humour.choleric",
             "cinderflask.humour.melancholic",
@@ -28,13 +34,19 @@ public class IngredientEmiRecipe extends BasicEmiRecipe {
     private final List<Text> lines;
 
     public IngredientEmiRecipe(Identifier id, ItemStack stack, IngredientTable.Entry entry) {
-        super(CinderflaskEmiPlugin.BREWING, id, 140, 0);
+        super(CinderflaskEmiPlugin.BREWING, id, WIDTH, 0);
         this.entry = entry;
         this.lines = describe();
 
-        // Tall enough for everything it has to say. The old page cut itself off at four lines, which
-        // silently hid the corruption on exactly the ingredients where it mattered most.
-        this.height = Math.max(28, 14 + lines.size() * 10);
+        // Tall enough for everything it has to say, counting wrapped lines rather than entries:
+        // "Aims at Honeyed Restorative" is two lines in this column and used to be one long one
+        // running off the page.
+        int used = 0;
+        for (Text line : lines) {
+            used += Pages.height(line, TEXT_WIDTH);
+        }
+
+        this.height = Math.max(28, used + 4);
 
         this.inputs = List.of(EmiStack.of(stack));
         this.outputs = List.of(CinderflaskEmiPlugin.FLASK);
@@ -46,8 +58,9 @@ public class IngredientEmiRecipe extends BasicEmiRecipe {
         widgets.addTexture(EmiTexture.EMPTY_ARROW, 22, 5);
         widgets.addSlot(outputs.get(0), 50, 4).recipeContext(this);
 
-        for (int line = 0; line < lines.size(); line++) {
-            widgets.addText(lines.get(line), 72, 2 + line * 10, 0xFFAAAAAA, false);
+        int y = 2;
+        for (Text line : lines) {
+            y = Pages.paragraph(widgets, line, TEXT_X, y, TEXT_WIDTH, 0xFFAAAAAA);
         }
     }
 

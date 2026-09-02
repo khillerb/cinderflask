@@ -17,7 +17,12 @@ public class DraughtEffect extends StatusEffect {
     private final Landmarks.Landmark landmark;
 
     protected DraughtEffect(Landmarks.Landmark landmark) {
-        super(StatusEffectCategory.BENEFICIAL, landmark.target().colour());
+        this(landmark, landmark.target().colour());
+    }
+
+    /** For the corrupt twins, which are the same landmark wearing a fouled colour. */
+    protected DraughtEffect(Landmarks.Landmark landmark, int colour) {
+        super(StatusEffectCategory.BENEFICIAL, colour);
         this.landmark = landmark;
     }
 

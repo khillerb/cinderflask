@@ -89,6 +89,41 @@ The mod is being rebuilt as a witch-brewing mod. Fuel is gone.
 - The sintered flask is built on the flask's own silhouette, so what is caked in sand is visibly
   the thing you put in.
 
+**Inflections**
+
+- Fourteen thresholds a brew can cross, from four sources: what it is like (concentration, evenness,
+  precision, reach, filth, age, volatility), how deep it is steeped in any one humour, what vessel it
+  was made in, and what creature its mote came from. Crossing one bends the dose. Crossing several
+  compounds — the count lengthens it, and the rarest brews are the ones that are several things at
+  once.
+- Level and Exact pull against each other on purpose, so heavy brews arrive by different routes
+  rather than one optimal one. There is a test that fails if they ever become compatible.
+- Cross enough at once and the dose carries **Unspent**: the next blow that would kill you leaves you
+  on a sliver instead, once. Nothing else in the mod is unreachable by aiming at a coordinate.
+- Which creatures leave a mote worth remarking on is a tag, `#cinderflask:storied_motes`.
+
+**Reach, and the corrupt half**
+
+- Quintessence decides who gets dosed rather than what they get, which is what the fiction always
+  said. A little and it stays in you; more and it bursts over whoever is standing with you; enough
+  and it hangs where you were and catches whoever walks in.
+- Twelve corrupt twins, one per landmark. Past a certain filth every draught turns — all of them,
+  not some — so corruption is somewhere to end up rather than a penalty. Same role, turned
+  malignant: Deadman's Vigour still hits harder the emptier you are, and now every swing is paid for
+  in blood.
+- Twins wear their landmark's colour dragged towards the murk, on a plate with the rim broken out of
+  it, so they read as their counterparts gone bad at icon size.
+- Drinking something heavy now looks like it: particles in the brew's own colour, thrown out to the
+  radius it actually covered.
+- A flask names the inflections it has crossed at sufficient palate, so this is something to aim at
+  rather than something to discover after swallowing.
+
+**Fixed**
+
+- Three of the four EMI pages ran their text off the edge — the vessel page by 234 pixels — because
+  EMI's addText does not wrap and nothing sized a page to its content. They wrap and size themselves
+  now, and the pages have been looked at rather than only measured.
+
 **Removed**
 
 - The fuel canister mechanic, the furnace mixin, and sparking.

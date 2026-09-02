@@ -1,22 +1,27 @@
 package dev.cinderflask.brew;
 
 import dev.cinderflask.config.CinderflaskConfig;
+import dev.cinderflask.effect.CorruptDraughts;
 import dev.cinderflask.effect.DraughtEffect;
 import dev.cinderflask.effect.Draughts;
 import dev.cinderflask.effect.Rebounds;
+import dev.cinderflask.effect.Unspent;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.List;
 
 /**
  * What a brew does when you drink it.
  *
  * <p>Nothing is looked up. A brew is a point, the twelve landmarks are points, and what you get is
- * whichever landmarks you are standing near, in proportion to how near. Everything people will say
- * about this system falls out of that one rule:
+ * whichever landmarks you are standing near, in proportion to how near. Everything people say about
+ * this system falls out of that one rule:
  *
  * <ul>
  *   <li>Hit a landmark squarely and you get almost all of one draught, because nothing else is close.
@@ -26,8 +31,11 @@ import java.util.List;
  *       is the trade balance is for.
  * </ul>
  *
- * <p>The crash afterwards is the same idea running backwards: a brew that was all one humour
- * rebounds by taking away exactly what that humour lent you. See {@link Rebounds}.
+ * <p>On top of that sit the {@link Inflection}s: thresholds the brew has crossed, each bending the
+ * dose a little and compounding when several are true at once. Corruption is one of them, and past
+ * it every draught comes from {@link CorruptDraughts} instead.
+ *
+ * <p>The crash afterwards is the same idea running backwards — see {@link Rebounds}.
  */
 public final class BrewEffects {
     /**
@@ -45,6 +53,12 @@ public final class BrewEffects {
 
     /** And an almost-level brew does not have one at all. */
     private static final float COMEDOWN_THRESHOLD = 0.15f;
+
+    /** What each inflection past the first is worth to duration. */
+    private static final float PER_INFLECTION = 0.12f;
+
+    /** What DEEP alone is worth to duration, on top of that. */
+    private static final float DEEP_STRETCH = 0.5f;
 
     /** One landmark and how much of this brew is it. */
     public record Share(Landmarks.Landmark landmark, float weight) {
@@ -104,19 +118,38 @@ public final class BrewEffects {
         return out;
     }
 
+    /** What a brew alone produces. The vessel and mote inflections cannot fire without a flask. */
     public static List<StatusEffectInstance> of(Brew brew) {
-        List<StatusEffectInstance> effects = new ArrayList<>(4);
+        return of(null, brew);
+    }
+
+    public static List<StatusEffectInstance> of(@Nullable ItemStack flask, Brew brew) {
+        List<StatusEffectInstance> effects = new ArrayList<>(5);
 
         Humours now = brew.current();
         if (now.magnitude() <= 0) {
             return effects;
         }
 
-        int duration = brew.durationTicks();
-        int amplifier = brew.amplifier();
+        EnumSet<Inflection> crossed = Inflection.of(flask, brew);
+        boolean foul = crossed.contains(Inflection.FOUL);
 
-        for (Share share : shares(now)) {
-            DraughtEffect draught = Draughts.of(share.landmark());
+        int duration = Math.round(brew.durationTicks() * stretch(crossed));
+        int amplifier = brew.amplifier() + (crossed.contains(Inflection.CONCENTRATED) ? 1 : 0);
+
+        List<Share> shares = shares(now);
+
+        // Sitting squarely on a landmark means the whole dose is that draught, not a blend that
+        // happens to lean towards it.
+        if (crossed.contains(Inflection.EXACT) && !shares.isEmpty()) {
+            shares = List.of(new Share(shares.get(0).landmark(), 1));
+        }
+
+        for (Share share : shares) {
+            DraughtEffect draught = foul
+                    ? CorruptDraughts.of(share.landmark())
+                    : Draughts.of(share.landmark());
+
             int ticks = Math.round(duration * share.weight());
 
             if (draught == null || ticks <= 0) {
@@ -127,23 +160,41 @@ public final class BrewEffects {
                     Math.round(amplifier * share.weight()), false, true, true));
         }
 
-        // The crash scales with how lopsided and how concentrated the brew is, so levelling one out
-        // is what spares you it — no separate rule, and nothing extra to author.
-        float severity = brew.comedown() * CinderflaskConfig.get().draughts.comedownSeverity;
-        if (severity > COMEDOWN_THRESHOLD) {
-            int ticks = Math.round(duration * COMEDOWN_DURATION * severity);
+        // A level brew has nothing to swing back from; everything else pays for how lopsided and how
+        // concentrated it is. No separate rule, and nothing extra to author.
+        if (!crossed.contains(Inflection.LEVEL)) {
+            float severity = brew.comedown() * CinderflaskConfig.get().draughts.comedownSeverity;
 
-            if (ticks > 0) {
-                effects.add(new StatusEffectInstance(
-                        Rebounds.forHumour(now.dominant()), ticks, 0, false, true, true));
+            if (severity > COMEDOWN_THRESHOLD) {
+                int ticks = Math.round(duration * COMEDOWN_DURATION * severity);
+
+                if (ticks > 0) {
+                    effects.add(new StatusEffectInstance(
+                            Rebounds.forHumour(now.dominant()), ticks, 0, false, true, true));
+                }
             }
+        }
+
+        // And the capstone, which no coordinate can reach on its own.
+        if (Inflection.capstoned(crossed)) {
+            effects.add(new StatusEffectInstance(Unspent.EFFECT, duration, 0, false, true, true));
         }
 
         return effects;
     }
 
+    /** Every inflection lengthens a dose a little; age lengthens it a lot. */
+    private static float stretch(EnumSet<Inflection> crossed) {
+        float extra = Math.max(0, crossed.size() - 1) * PER_INFLECTION;
+        return 1 + extra + (crossed.contains(Inflection.DEEP) ? DEEP_STRETCH : 0);
+    }
+
     public static void apply(LivingEntity drinker, Brew brew) {
-        for (StatusEffectInstance effect : of(brew)) {
+        apply(drinker, null, brew);
+    }
+
+    public static void apply(LivingEntity drinker, @Nullable ItemStack flask, Brew brew) {
+        for (StatusEffectInstance effect : of(flask, brew)) {
             drinker.addStatusEffect(effect);
         }
     }

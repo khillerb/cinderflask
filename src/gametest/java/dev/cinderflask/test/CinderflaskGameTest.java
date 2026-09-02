@@ -320,9 +320,9 @@ public class CinderflaskGameTest implements FabricGameTest {
             float seed = 0.11f;
             for (Field knob : knobs) {
                 if (knob.getType() == float.class) {
-                    knob.setFloat(sent.draughts, seed += 0.07f);
+                    knob.setFloat(blockOf(sent, knob), seed += 0.07f);
                 } else if (knob.getType() == int.class) {
-                    knob.setInt(sent.draughts, 9);
+                    knob.setInt(blockOf(sent, knob), 9);
                 }
             }
         } catch (IllegalAccessException e) {
@@ -346,10 +346,10 @@ public class CinderflaskGameTest implements FabricGameTest {
 
         try {
             for (Field knob : knobs) {
-                if (!knob.get(sent.draughts).equals(knob.get(got.draughts))) {
-                    throw new GameTestException("draughts." + knob.getName()
-                            + " did not survive the round trip: sent " + knob.get(sent.draughts)
-                            + ", got " + knob.get(got.draughts));
+                if (!knob.get(blockOf(sent, knob)).equals(knob.get(blockOf(got, knob)))) {
+                    throw new GameTestException(knob.getName()
+                            + " did not survive the round trip: sent " + knob.get(blockOf(sent, knob))
+                            + ", got " + knob.get(blockOf(got, knob)));
                 }
             }
         } catch (IllegalAccessException e) {
@@ -362,11 +362,23 @@ public class CinderflaskGameTest implements FabricGameTest {
     /** Every tunable field, so adding one to the config and not to the packet fails this test. */
     private static List<Field> knobs() {
         List<Field> fields = new ArrayList<>();
-        for (Field field : CinderflaskConfig.Tuning.class.getDeclaredFields()) {
-            if (!field.isSynthetic() && !Modifier.isStatic(field.getModifiers())) {
-                fields.add(field);
+
+        for (Class<?> block : new Class<?>[]{
+                CinderflaskConfig.Tuning.class, CinderflaskConfig.Inflections.class}) {
+            for (Field field : block.getDeclaredFields()) {
+                if (!field.isSynthetic() && !Modifier.isStatic(field.getModifiers())) {
+                    fields.add(field);
+                }
             }
         }
+
         return fields;
+    }
+
+    /** Which block a knob belongs to, so the round trip can seed and compare it. */
+    private static Object blockOf(CinderflaskConfig config, Field knob) {
+        return knob.getDeclaringClass() == CinderflaskConfig.Tuning.class
+                ? config.draughts
+                : config.inflections;
     }
 }

@@ -306,6 +306,18 @@ public final class Almanac {
         nodes.add(gated("balance", Items.AMETHYST_SHARD, 560, -20, 3, 2));
         nodes.add(gated("rebound", Items.POISONOUS_POTATO, 560, 100, 0, 3));
 
+        // The four new nodes hang off the numbers, because that is what they are: what a brew's
+        // own quantities do once they pass a point.
+        nodes.add(gated("inflections", Items.AMETHYST_CLUSTER, 700, -380, 1, 3));
+        nodes.add(gated("delivery", Items.ECHO_SHARD, 700, -260, REACH_AXIS, 3));
+        nodes.add(gated("corrupt", Items.WITHER_ROSE, 700, -140, 3, 4));
+        nodes.add(gated("capstone", Items.NETHER_STAR, 700, -20, 0, 5));
+
+        edges.add(new Edge("amplifier", "inflections"));
+        edges.add(new Edge("inflections", "delivery"));
+        edges.add(new Edge("inflections", "corrupt"));
+        edges.add(new Edge("corrupt", "capstone"));
+
         edges.add(new Edge("wheel", "amplifier"));
         for (int i = 1; i < chain.length; i++) {
             edges.add(new Edge(chain[i - 1], chain[i]));

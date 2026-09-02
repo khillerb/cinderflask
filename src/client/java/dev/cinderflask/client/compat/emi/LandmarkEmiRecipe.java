@@ -30,11 +30,18 @@ import java.util.Map;
 public class LandmarkEmiRecipe extends BasicEmiRecipe {
     private static final int ROUTE_LIMIT = 6;
 
+    /** Six route slots, an arrow and an output slot come to 158 before any margin. */
+    private static final int WIDTH = 190;
+
+    private static final int ROUTE_TOP = 24;
+    private static final int WORDS_TOP = 48;
+
     private final Landmarks.Landmark landmark;
+    private final Text words;
 
     public LandmarkEmiRecipe(Landmarks.Landmark landmark) {
         super(CinderflaskEmiPlugin.LANDMARKS,
-                CinderflaskEmiPlugin.synthetic("landmark/" + landmark.id().getPath()), 152, 60);
+                CinderflaskEmiPlugin.synthetic("landmark/" + landmark.id().getPath()), WIDTH, 0);
         this.landmark = landmark;
 
         // Grouped, so three blaze powder reads as one stack of three rather than three slots.
@@ -50,6 +57,10 @@ public class LandmarkEmiRecipe extends BasicEmiRecipe {
 
         this.inputs = route;
         this.outputs = List.of(CinderflaskEmiPlugin.FLASK);
+
+        // The same words the flask's own tooltip uses, rather than four bare numbers.
+        this.words = Readout.inWords(landmark.target()).formatted(Formatting.GRAY);
+        this.height = WORDS_TOP + Pages.height(words, WIDTH) + 4;
     }
 
     @Override
@@ -65,15 +76,13 @@ public class LandmarkEmiRecipe extends BasicEmiRecipe {
         }
 
         for (int i = 0; i < inputs.size(); i++) {
-            widgets.addSlot(inputs.get(i), i * 18, 24);
+            widgets.addSlot(inputs.get(i), i * 18, ROUTE_TOP);
         }
 
         int afterRoute = inputs.size() * 18;
-        widgets.addTexture(EmiTexture.EMPTY_ARROW, afterRoute + 4, 25);
-        widgets.addSlot(outputs.get(0), afterRoute + 32, 24).recipeContext(this);
+        widgets.addTexture(EmiTexture.EMPTY_ARROW, afterRoute + 4, ROUTE_TOP + 1);
+        widgets.addSlot(outputs.get(0), afterRoute + 32, ROUTE_TOP).recipeContext(this);
 
-        // The same words the flask's own tooltip uses, rather than four bare numbers.
-        widgets.addText(Readout.inWords(landmark.target()).formatted(Formatting.GRAY),
-                0, 48, 0xFFAAAAAA, false);
+        Pages.paragraph(widgets, words, 0, WORDS_TOP, WIDTH, 0xFFAAAAAA);
     }
 }

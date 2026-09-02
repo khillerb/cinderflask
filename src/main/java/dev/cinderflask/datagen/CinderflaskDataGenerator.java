@@ -26,6 +26,7 @@ public class CinderflaskDataGenerator implements DataGeneratorEntrypoint {
         FabricDataGenerator.Pack pack = generator.createPack();
         pack.addProvider(Recipes::new);
         pack.addProvider(BrewingProvider::new);
+        pack.addProvider(StoriedMotes::new);
         pack.addProvider(EnglishLanguage::new);
     }
 
@@ -54,6 +55,36 @@ public class CinderflaskDataGenerator implements DataGeneratorEntrypoint {
             ComplexRecipeJsonBuilder.create(Cinderflask.AETHERGLASS_RECIPE).offerTo(exporter, "cinderflask:aetherglass");
             ComplexRecipeJsonBuilder.create(Cinderflask.ALMANAC_RECIPE).offerTo(exporter, "cinderflask:almanac");
 
+        }
+    }
+
+    /**
+     * Which creatures leave a mote worth remarking on.
+     *
+     * <p>A tag rather than a list in code, so a pack can decide what counts as rare on its own
+     * terms. The defaults are the things you do not meet twice in an afternoon.
+     */
+    private static class StoriedMotes extends net.fabricmc.fabric.api.datagen.v1.provider.FabricTagProvider.EntityTypeTagProvider {
+        StoriedMotes(FabricDataOutput output,
+                     java.util.concurrent.CompletableFuture<net.minecraft.registry.RegistryWrapper.WrapperLookup> registries) {
+            super(output, registries);
+        }
+
+        @Override
+        protected void configure(net.minecraft.registry.RegistryWrapper.WrapperLookup registries) {
+            getOrCreateTagBuilder(dev.cinderflask.brew.Inflection.STORIED_MOTES)
+                    .add(net.minecraft.entity.EntityType.ENDER_DRAGON)
+                    .add(net.minecraft.entity.EntityType.WITHER)
+                    .add(net.minecraft.entity.EntityType.WARDEN)
+                    .add(net.minecraft.entity.EntityType.ELDER_GUARDIAN)
+                    .add(net.minecraft.entity.EntityType.RAVAGER)
+                    .add(net.minecraft.entity.EntityType.EVOKER)
+                    .add(net.minecraft.entity.EntityType.PIGLIN_BRUTE)
+                    .add(net.minecraft.entity.EntityType.SHULKER)
+                    .add(net.minecraft.entity.EntityType.GHAST)
+                    .add(net.minecraft.entity.EntityType.PHANTOM)
+                    .add(net.minecraft.entity.EntityType.WITHER_SKELETON)
+                    .add(net.minecraft.entity.EntityType.ALLAY);
         }
     }
 
@@ -250,6 +281,47 @@ public class CinderflaskDataGenerator implements DataGeneratorEntrypoint {
             builder.add("cinderflask.almanac.sump.body", "What a brew becomes when it is left far too long, or crammed past what the glass can hold. It is not a drink. It remembers what it used to be, which is what makes it a way into the corrupt half rather than simply rubbish.");
             builder.add("cinderflask.almanac.names.title", "Earned Names");
             builder.add("cinderflask.almanac.names.body", "A flask that has held enough brews takes a name from whatever it kept holding. The name follows the vessel through every upgrade and through the fire.");
+
+
+            // Phase 6: the corrupt half, the inflections, and the capstone.
+            builder.add("effect.cinderflask.unspent", "Unspent");
+            builder.add("effect.cinderflask.foul_deadmans_draught", "Deadman's Hunger");
+            builder.add("effect.cinderflask.foul_ironroot_tonic", "Ironrot");
+            builder.add("effect.cinderflask.foul_sap_sworn_mead", "Sapleech");
+            builder.add("effect.cinderflask.foul_nightcap", "Stranglehold");
+            builder.add("effect.cinderflask.foul_bramblewine", "Wrackthorn");
+            builder.add("effect.cinderflask.foul_deepdelve", "Gravedelve");
+            builder.add("effect.cinderflask.foul_kelpwine", "Drowned");
+            builder.add("effect.cinderflask.foul_quickstep_draught", "Sprintwrack");
+            builder.add("effect.cinderflask.foul_emberflask", "Pyre");
+            builder.add("effect.cinderflask.foul_riposte_cordial", "Reprisal");
+            builder.add("effect.cinderflask.foul_honeyed_restorative", "Cloying");
+            builder.add("effect.cinderflask.foul_gravemead", "Grave-Called");
+
+            builder.add("cinderflask.inflection.concentrated", "Concentrated");
+            builder.add("cinderflask.inflection.level", "Level");
+            builder.add("cinderflask.inflection.exact", "Exact");
+            builder.add("cinderflask.inflection.far", "Far-Carrying");
+            builder.add("cinderflask.inflection.foul", "Foul");
+            builder.add("cinderflask.inflection.deep", "Deep");
+            builder.add("cinderflask.inflection.volatile", "Volatile");
+            builder.add("cinderflask.inflection.acrid", "Acrid");
+            builder.add("cinderflask.inflection.leaden", "Leaden");
+            builder.add("cinderflask.inflection.lush", "Lush");
+            builder.add("cinderflask.inflection.brackish", "Brackish");
+            builder.add("cinderflask.inflection.aetheric", "Aetheric");
+            builder.add("cinderflask.inflection.storied", "Storied");
+            builder.add("cinderflask.inflection.omened", "Omened");
+            builder.add("cinderflask.readout.inflections", "Marked: %s");
+
+            builder.add("cinderflask.almanac.inflections.title", "Inflections");
+            builder.add("cinderflask.almanac.inflections.body", "A brew is not only where it sits. Concentration, evenness, precision, reach, filth, age and volatility each have a point they cross, and so do steeping deep in one humour, the vessel it was made in and the creature its mote came from. Crossing one bends the dose. Crossing several compounds, and the rarest brews are the ones that are several things at once.");
+            builder.add("cinderflask.almanac.capstone.title", "The Unspent");
+            builder.add("cinderflask.almanac.capstone.body", "Cross enough at once and the dose carries a refusal: the next blow that would finish you leaves you standing on a sliver instead, and then it is spent. No coordinate grants it. It is the one thing in the glass you cannot reach by aiming.");
+            builder.add("cinderflask.almanac.corrupt.title", "The Other Half");
+            builder.add("cinderflask.almanac.corrupt.body", "Past a certain filth every draught turns. The role is the same and the price is new: Deadman's Vigour still hits harder the emptier you are, and now every swing is paid for in blood. Twelve brews become twenty-four, and the second twelve are not a punishment. They are somewhere else to be.");
+            builder.add("cinderflask.almanac.delivery.title", "Who It Lands On");
+            builder.add("cinderflask.almanac.delivery.body", "Reach decides who drinks it. A little and it stays in you. More and it bursts outward over whoever is standing with you. Enough and it does not land at all \u2014 it hangs where you were, and catches whoever walks in.");
 
             builder.add("cinderflask.name.format", "%s %s");
             builder.add("cinderflask.name.adjective.ember", "Old");

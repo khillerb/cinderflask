@@ -94,6 +94,17 @@ public final class ConfigSync {
         buf.writeFloat(tuning.bloodlessDrain);
         buf.writeFloat(tuning.plainSightExposure);
         buf.writeVarInt(tuning.emberbloodBurnSeconds);
+
+        CinderflaskConfig.Inflections marks = config.inflections;
+        buf.writeFloat(marks.concentrated);
+        buf.writeFloat(marks.level);
+        buf.writeFloat(marks.exact);
+        buf.writeFloat(marks.far);
+        buf.writeFloat(marks.foul);
+        buf.writeFloat(marks.deep);
+        buf.writeFloat(marks.volatile_);
+        buf.writeFloat(marks.humourDepth);
+        buf.writeVarInt(marks.capstone);
     }
 
     /** The other half of {@link #write}. Read in exactly the order it was written. */
@@ -124,6 +135,17 @@ public final class ConfigSync {
         tuning.bloodlessDrain = buf.readFloat();
         tuning.plainSightExposure = buf.readFloat();
         tuning.emberbloodBurnSeconds = buf.readVarInt();
+
+        CinderflaskConfig.Inflections marks = config.inflections;
+        marks.concentrated = buf.readFloat();
+        marks.level = buf.readFloat();
+        marks.exact = buf.readFloat();
+        marks.far = buf.readFloat();
+        marks.foul = buf.readFloat();
+        marks.deep = buf.readFloat();
+        marks.volatile_ = buf.readFloat();
+        marks.humourDepth = buf.readFloat();
+        marks.capstone = buf.readVarInt();
 
         return config;
     }

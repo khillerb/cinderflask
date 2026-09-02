@@ -39,6 +39,8 @@ public final class CinderflaskConfig {
 
     public Tuning draughts = new Tuning();
 
+    public Inflections inflections = new Inflections();
+
     /**
      * What the draughts are worth.
      *
@@ -78,6 +80,42 @@ public final class CinderflaskConfig {
         public float dial(float share) {
             return share * potency;
         }
+    }
+
+    /**
+     * Where each of a brew's qualities turns into a fact about it.
+     *
+     * <p>Crossing one changes the dose; crossing several compounds. Kept apart from {@link Tuning}
+     * because these are thresholds rather than shares, and some of them are legitimately far larger
+     * than one.
+     */
+    public static final class Inflections {
+        /** Essence per unit of vessel past which a brew counts as packed tight. */
+        public float concentrated = 1.6f;
+
+        /** Normalised entropy past which the four humours count as level. */
+        public float level = 0.92f;
+
+        /** Similarity to the nearest landmark past which a brew counts as sitting on it. */
+        public float exact = 0.97f;
+
+        /** Quintessence past which a brew reaches beyond the drinker. */
+        public float far = 8;
+
+        /** Corruption past which every draught turns. */
+        public float foul = 0.5f;
+
+        /** Full turns of the wheel past which a brew counts as old. */
+        public float deep = 2;
+
+        /** Volatility past which drinking it is itself dangerous. */
+        public float volatile_ = 4;
+
+        /** Absolute amount of any one humour past which the brew is steeped in it. */
+        public float humourDepth = 10;
+
+        /** How many inflections a dose needs before it grants something no landmark can. */
+        public int capstone = 4;
     }
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -131,9 +169,27 @@ public final class CinderflaskConfig {
             maxDraughtsPerDose = Math.min(12, Math.max(1, maxDraughtsPerDose));
         }
 
-        // An older file, or one somebody deleted the block out of.
+        // An older file, or one somebody deleted a block out of.
         if (draughts == null) {
             draughts = new Tuning();
+        }
+        if (inflections == null) {
+            inflections = new Inflections();
+        }
+
+        inflections.concentrated = threshold("concentrated", inflections.concentrated);
+        inflections.level = threshold("level", inflections.level);
+        inflections.exact = threshold("exact", inflections.exact);
+        inflections.far = threshold("far", inflections.far);
+        inflections.foul = threshold("foul", inflections.foul);
+        inflections.deep = threshold("deep", inflections.deep);
+        inflections.volatile_ = threshold("volatile", inflections.volatile_);
+        inflections.humourDepth = threshold("humourDepth", inflections.humourDepth);
+
+        if (inflections.capstone < 1 || inflections.capstone > 14) {
+            Cinderflask.LOGGER.warn("inflections.capstone was {}, clamping into 1..14.",
+                    inflections.capstone);
+            inflections.capstone = Math.min(14, Math.max(1, inflections.capstone));
         }
 
         draughts.potency = clamp("potency", draughts.potency);
@@ -160,6 +216,16 @@ public final class CinderflaskConfig {
                     draughts.emberbloodBurnSeconds);
             draughts.emberbloodBurnSeconds = Math.min(60, Math.max(0, draughts.emberbloodBurnSeconds));
         }
+    }
+
+    /** Thresholds are read against real quantities, so they run much wider than a share does. */
+    private static float threshold(String name, float value) {
+        if (Float.isNaN(value) || value < 0 || value > 100) {
+            float fixed = Float.isNaN(value) ? 0 : Math.min(100, Math.max(0, value));
+            Cinderflask.LOGGER.warn("inflections.{} was {}, clamping to {}.", name, value, fixed);
+            return fixed;
+        }
+        return value;
     }
 
     /** Shares are all fractions or small flat amounts; nothing sane is negative or past ten. */

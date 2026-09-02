@@ -3,6 +3,7 @@ package dev.cinderflask.brew;
 import dev.cinderflask.effect.DraughtEffect;
 import dev.cinderflask.effect.Draughts;
 import dev.cinderflask.player.Palate;
+import net.minecraft.item.ItemStack;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -33,6 +34,16 @@ public final class Readout {
     }
 
     public static List<Text> describe(Brew brew, Palate palate) {
+        return describe(null, brew, palate);
+    }
+
+    /**
+     * The same, with the flask in hand, so the inflections that live on the vessel can be named.
+     *
+     * <p>Naming them is what turns the system into something you aim at rather than something you
+     * find out about after swallowing.
+     */
+    public static List<Text> describe(@Nullable ItemStack flask, Brew brew, Palate palate) {
         List<Text> lines = new ArrayList<>(3);
         Humours now = brew.current();
 
@@ -71,6 +82,11 @@ public final class Readout {
             lines.add(draughts.formatted(Formatting.DARK_AQUA));
         }
 
+        MutableText marked = inflections(flask, brew);
+        if (marked != null) {
+            lines.add(marked.formatted(Formatting.LIGHT_PURPLE));
+        }
+
         return lines;
     }
 
@@ -93,6 +109,19 @@ public final class Readout {
         }
 
         return joined == null ? null : Text.translatable("cinderflask.readout.draughts", joined);
+    }
+
+    /** Everything the brew has crossed, so a heavy one can be recognised before it is drunk. */
+    @Nullable
+    private static MutableText inflections(@Nullable ItemStack flask, Brew brew) {
+        MutableText joined = null;
+
+        for (Inflection inflection : Inflection.of(flask, brew)) {
+            MutableText part = Text.translatable(inflection.translationKey());
+            joined = joined == null ? part : joined.append(", ").append(part);
+        }
+
+        return joined == null ? null : Text.translatable("cinderflask.readout.inflections", joined);
     }
 
     /** What it smells like, when you have no idea what you are smelling. */

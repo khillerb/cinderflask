@@ -71,7 +71,7 @@ public class CinderflaskScreen extends HandledScreen<CinderflaskScreenHandler> {
 
             // Same seam as the tooltip, so what a brew reads like is decided in one place.
             int line = 52;
-            for (Text described : Readout.describe(brew, PalateSync.local())) {
+            for (Text described : Readout.describe(flask, brew, PalateSync.local())) {
                 drawCentered(context, described, line);
                 line += 10;
             }

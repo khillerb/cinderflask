@@ -5,6 +5,7 @@ import dev.cinderflask.brew.Brew;
 import dev.cinderflask.brew.BrewState;
 import dev.cinderflask.brew.Brewing;
 import dev.cinderflask.brew.Cracking;
+import dev.cinderflask.brew.Delivery;
 import dev.cinderflask.brew.Dregs;
 import dev.cinderflask.brew.IngredientTable;
 import dev.cinderflask.brew.BrewEffects;
@@ -234,7 +235,8 @@ public class CinderflaskItem extends Item {
             return stack;
         }
 
-        BrewEffects.apply(drinker, brew);
+        // Reach decides who this lands on, so the dose is served rather than swallowed.
+        Delivery.serve((ServerWorld) world, drinker, stack, brew);
 
         int remaining = doses - 1;
         BrewNbt.setDoses(stack, remaining);
@@ -377,7 +379,7 @@ public class CinderflaskItem extends Item {
             return;
         }
 
-        tooltip.addAll(Readout.describe(brew, PalateSync.local()));
+        tooltip.addAll(Readout.describe(stack, brew, PalateSync.local()));
 
         if (detailModifierHeld.getAsBoolean()) {
             tooltip.add(Text.translatable("cinderflask.tooltip.age",

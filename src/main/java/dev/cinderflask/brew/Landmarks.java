@@ -114,6 +114,22 @@ public final class Landmarks {
         return ALL;
     }
 
+    /**
+     * How close a brew sits to the nearest landmark, whether or not it is close enough to claim it.
+     *
+     * <p>{@link #nearest} answers "which one", and returns nothing below {@link #SIMILARITY}. This
+     * answers "how near", which is what an inflection on precision needs.
+     */
+    public static float bestSimilarity(Humours brew) {
+        float best = 0;
+
+        for (Landmark landmark : ALL) {
+            best = Math.max(best, brew.similarity(landmark.target()));
+        }
+
+        return best;
+    }
+
     /** The landmark a brew has landed on, if it has landed on one at all. */
     public static Landmark nearest(Humours brew) {
         Landmark best = null;

@@ -755,8 +755,12 @@ def effect_icon(name: str, humour: int, kind: str) -> Image.Image:
     return plated(landmark_colour(humour, kind), GLYPHS[name])
 
 
-def plated(colour, glyph) -> Image.Image:
-    """A dark rounded plate with a glyph on it, in three steps of one colour."""
+def plated(colour, glyph, broken: bool = False) -> Image.Image:
+    """A dark rounded plate with a glyph on it, in three steps of one colour.
+
+    A broken plate has bites taken out of its rim. The corrupt twins are otherwise only a duller
+    shade of their clean counterpart, which is not enough to tell apart at eighteen pixels.
+    """
     black = (0, 0, 0)
     white = (255, 255, 255)
 
@@ -777,6 +781,11 @@ def plated(colour, glyph) -> Image.Image:
     drawing.rectangle((1, 1, 16, 16), outline=rim)
     for x, y in ((1, 1), (16, 1), (1, 16), (16, 16)):
         image.putpixel((x, y), (0, 0, 0, 0))
+
+    if broken:
+        for x, y in ((1, 5), (1, 6), (1, 7), (16, 10), (16, 11), (16, 12),
+                     (6, 1), (7, 1), (10, 16), (11, 16)):
+            image.putpixel((x, y), (0, 0, 0, 0))
 
     for row, line in enumerate(glyph):
         for column, cell in enumerate(line):
@@ -871,6 +880,42 @@ def rebound_icons() -> dict:
     return icons
 
 
+# The corrupt half. Same glyph, same plate, the landmark's own colour dragged towards the murk, so a
+# twin reads as its clean counterpart gone bad rather than as a separate effect.
+CORRUPT_SOURED = 0.5
+
+# Unspent: the capstone. A closed ring with something still burning in it.
+UNSPENT_GLYPH = [
+    "...------...",
+    "..-######-..",
+    ".-##----##-.",
+    "-##--##--##-",
+    "-#--#++#--#-",
+    "-#--#++#--#-",
+    "-##--##--##-",
+    ".-##----##-.",
+    "..-######-..",
+    "...------...",
+]
+
+
+def corrupt_icons() -> dict:
+    icons = {}
+    murk = tuple((MURK_RGB >> shift) & 0xFF for shift in (16, 8, 0))
+
+    for name, humour, kind in LANDMARKS:
+        fouled = shade(landmark_colour(humour, kind), murk, CORRUPT_SOURED)
+        icons["foul_" + name] = plated(fouled, GLYPHS[name], broken=True)
+
+    return icons
+
+
+def unspent_icon() -> Image.Image:
+    # Ten wide like every other glyph; the ring is drawn twelve across and trimmed to fit.
+    glyph = [row[1:11] for row in UNSPENT_GLYPH]
+    return plated((243, 204, 102), glyph)
+
+
 def preview(states: dict[str, Image.Image]) -> Image.Image:
     """The README image: the same four fill levels under each of the four humours."""
     scale = 64
@@ -940,6 +985,11 @@ def main() -> None:
 
     for name, art in rebound_icons().items():
         written[os.path.join(EFFECT_DIR, name + ".png")] = art
+
+    for name, art in corrupt_icons().items():
+        written[os.path.join(EFFECT_DIR, name + ".png")] = art
+
+    written[os.path.join(EFFECT_DIR, "unspent.png")] = unspent_icon()
 
     for path, image in written.items():
         image.save(path, optimize=True)
